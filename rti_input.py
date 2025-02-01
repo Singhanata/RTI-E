@@ -28,7 +28,12 @@ class RTIInput():
     def update(self, vl, key, sDID, idx):
         self.log[key][sDID][idx][self.count[key][sDID-1][idx]] = vl
         self.count[key][sDID-1][idx] += 1
-        self.prior[key][sDID][idx][1] = vl - self.prior[key][sDID][idx][0] 
+        # 01022025:1548: FIX: image report negative value
+        normVl = self.prior[key][sDID][idx][0] 
+        att = normVl - vl
+        updateNormVl = normVl + vl/self.size
+        self.prior[key][sDID][idx][0] = updateNormVl
+        self.prior[key][sDID][idx][1] = att
         if self.count[key][sDID-1][idx] >= self.size:
             if not self.ready:
                 self.prior[key][sDID][idx][0] = np.average(self.log[key][sDID][idx])
