@@ -16,7 +16,6 @@ class RTIInput():
         self.count = {}
         self.size = sz
         self.savepath = savepath
-        self.ready = False
         for ar in args:
             self.log[ar] = {}
             self.prior[ar] = {}
@@ -29,15 +28,15 @@ class RTIInput():
         self.log[key][sDID][idx][self.count[key][sDID-1][idx]] = vl
         self.count[key][sDID-1][idx] += 1
         # 01022025:1548: FIX: image report negative value
-        normVl = self.prior[key][sDID][idx][0] 
+        normVl = self.prior[key][sDID][idx][0]
+        sz = self.size
         att = normVl - vl
-        updateNormVl = normVl + vl/self.size
+        # 01022025:1611: FIX: increasing negative value in the image
+        updateNormVl = (normVl * sz + vl)/(sz + 1)
         self.prior[key][sDID][idx][0] = updateNormVl
         self.prior[key][sDID][idx][1] = att
         if self.count[key][sDID-1][idx] >= self.size:
-            if not self.ready:
-                self.prior[key][sDID][idx][0] = np.average(self.log[key][sDID][idx])
-            self.ready = True
+            self.prior[key][sDID][idx][0] = np.average(self.log[key][sDID][idx])
             self.timeStr = datetime.now().strftime('_%d%m%Y_%H%M%S')
             filename = key + ' N' + str(sDID) + self.timeStr + '.csv'
             filepath = os.sep.join([self.savepath['rec'], filename])
