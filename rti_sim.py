@@ -165,7 +165,7 @@ class RTISimulation():
         l_atten = self.scheme.updateInput(inp)
         iM = {}
         for key, vl in l_atten.items():
-            # 01022025: Test not to normalied the image before plat
+            # 01022025: Test not to normalied the image before plot
             iM[key] = self.estimator.calVoxelAtten(vl, False) 
         return iM
     
