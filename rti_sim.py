@@ -165,7 +165,8 @@ class RTISimulation():
         l_atten = self.scheme.updateInput(inp)
         iM = {}
         for key, vl in l_atten.items():
-            iM[key] = self.estimator.calVoxelAtten(vl, True)
+            # 01022025: Test not to normalied the image before plat
+            iM[key] = self.estimator.calVoxelAtten(vl, False) 
         return iM
     
     def coorD(self, **kw):
