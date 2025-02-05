@@ -21,7 +21,7 @@ class RTIInput():
             self.prior[ar] = {}
             for i in range(dim[0]):
                 self.log[ar][i+1] = np.zeros([dim[1], sz])
-                self.prior[ar][i+1] = np.zeros([dim[1], 2])
+                self.prior[ar][i+1] = np.zeros([dim[1], 4])
             self.count[ar] = np.zeros((dim[0],dim[1]), dtype=int)
     
     def update(self, vl, key, sDID, idx):
@@ -32,11 +32,16 @@ class RTIInput():
         sz = self.size
         att = normVl - vl
         # 01022025:1611: FIX: increasing negative value in the image
-        updateNormVl = (normVl * sz + vl)/(sz + 1)
+        if abs(att) < 2: # 05022025:1051:FIX: Baseline include target
+            updateNormVl = (normVl * sz + vl)/(sz + 1)
         self.prior[key][sDID][idx][0] = updateNormVl
         self.prior[key][sDID][idx][1] = att
         if self.count[key][sDID-1][idx] >= self.size:
-            self.prior[key][sDID][idx][0] = np.average(self.log[key][sDID][idx])
+            if self.prior[key][sDID][idx][3] == 0:
+                self.prior[key][sDID][idx][2] = np.average(self.log[key][sDID][idx])
+                self.prior[key][sDID][idx][0] = np.average(self.log[key][sDID][idx])
+                self.prior[key][sDID][idx][3] = 1
+            self.prior[key][sDID][idx][0] = self.prior[key][sDID][idx][2]
             self.timeStr = datetime.now().strftime('_%d%m%Y_%H%M%S')
             filename = key + ' N' + str(sDID) + self.timeStr + '.csv'
             filepath = os.sep.join([self.savepath['rec'], filename])
