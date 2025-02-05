@@ -81,7 +81,7 @@ class RTIProcess():
         # msgID = int.from_bytes(msg[FrameIndex.ID])
         # sNID = msg[FrameIndex.sNID]
         sDID = msg[FrameIndex.sDID]
-        print('NODE ID:' + str(sDID))
+        # print('NODE ID:' + str(sDID))
         l = int.from_bytes(msg[FrameIndex.LENGTH_START:FrameIndex.MASK], 
                            "little", signed=True)
         mask = int.from_bytes(msg[FrameIndex.MASK:FrameIndex.PAYLOAD], 
@@ -93,7 +93,7 @@ class RTIProcess():
                 rssi_vl = int.from_bytes(msg[ptr:(ptr+FrameSymbol.SIZE)], 
                                          "little", signed=True)
                 ptr+=FrameSymbol.SIZE
-                print("RSSI: " +  str(rssi_vl))
+                # print("RSSI: " +  str(rssi_vl))
                 self.input.update(rssi_vl, 'rssi', sDID, i)
             mask = int.from_bytes(msg[ptr:(ptr+FrameSymbol.SIZE)], 
                                   "little", signed=True)
@@ -102,7 +102,7 @@ class RTIProcess():
                 for i in range(n):
                     ir_vl = int.from_bytes(msg[ptr:(ptr+FrameSymbol.SIZE)], 
                                            "little", signed=True)
-                    print("IR:" + str(ir_vl))
+                    # print("IR:" + str(ir_vl))
                     ptr+=FrameSymbol.SIZE
                     self.input.update(ir_vl, 'ir', sDID, i)
                 mask = int.from_bytes(msg[ptr:(ptr+FrameSymbol.SIZE)], 
