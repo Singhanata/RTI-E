@@ -57,8 +57,8 @@ def plotRTIIm(scheme, iM, **kw):
                    cmap=color,
                    origin='lower',
                    interpolation='nearest',
-                   vmin=0,
-                   vmax=6)
+                   vmin=1.5,
+                   vmax=3)
 
     cb = plt.colorbar(hm)
     plt.grid()

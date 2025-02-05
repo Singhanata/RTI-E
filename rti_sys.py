@@ -11,7 +11,7 @@ from rti_input import RTIInput
 from rti_plot import plotRTIIm #, plotDerivative
 
 class RTIProcess():
-    RECORD_SIZE = 10
+    RECORD_SIZE = 100
     
     def __init__(self, sim):
         setting = {
@@ -20,7 +20,7 @@ class RTIProcess():
             'area_dimension': (6., 6.),
             'voxel_dimension': (0.20, 0.20),
             'sensing_area_position': (6., 6.),
-            'n_sensor':4,
+            'n_sensor':12,
             'alpha': 1,
             'schemeType': 'SW',
             'weightalgorithm': 'EX',
