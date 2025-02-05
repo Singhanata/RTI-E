@@ -57,7 +57,8 @@ def plotRTIIm(scheme, iM, **kw):
                    cmap=color,
                    origin='lower',
                    interpolation='nearest',
-                   vmin=0)
+                   vmin=0,
+                   vmax=6)
 
     cb = plt.colorbar(hm)
     plt.grid()
@@ -74,6 +75,11 @@ def plotRTIIm(scheme, iM, **kw):
         if 'path' in kw:
             fn = os.sep.join([kw['path'], 
                              (filename + '.svg')])
+            fn_csv = os.sep.join([kw['path'], 
+                             (filename + '.csv')])
+            np.savetxt(fn_csv, iM.T, 
+                       delimiter = ',', fmt = '%s')
+
         else:
             fn = (filename + '.svg')
         plt.savefig(fn)    
