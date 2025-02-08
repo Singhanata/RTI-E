@@ -5,7 +5,7 @@ Created on Wed Oct  5 20:00:07 2022
 @author: krong
 """
 import numpy as np
-import ctypes
+# import ctypes
 import os
 # import warning
 from datetime import datetime
@@ -37,7 +37,7 @@ class RTIInput():
             updateNormVl = (normVl * sz + vl)/(sz + 1)
             self.prior[key][sDID][idx][0] = updateNormVl
         self.prior[key][sDID][idx][1] = att
-        os.system('cls')
+        
         nei = 0
         if sDID % 2 == 0:
             nei = 2 * idx + 1
@@ -46,13 +46,13 @@ class RTIInput():
         print("LINK"+ str(sDID)+ "-" + str(nei) 
               + " RSSI:" + str(vl) 
               + " BASE:" + str(self.prior[key][sDID][idx][0]) 
-              + "ct:" + str(self.count[key][sDID-1][idx]))
+              + " ct:" + str(self.count[key][sDID-1][idx]))
         if self.count[key][sDID-1][idx] >= self.size:
             if self.prior[key][sDID][idx][3] == 0:
                 self.prior[key][sDID][idx][2] = np.average(self.log[key][sDID][idx])
                 self.prior[key][sDID][idx][0] = np.average(self.log[key][sDID][idx])
                 self.prior[key][sDID][idx][3] = 1
-                ctypes.windll.user32.MessageBoxW(0, "set baseline", "warning", 1)
+                # ctypes.windll.user32.MessageBoxW(0, "set baseline", "warning", 1)
             self.prior[key][sDID][idx][0] = self.prior[key][sDID][idx][2]
             self.timeStr = datetime.now().strftime('_%d%m%Y_%H%M%S')
             filename = key + ' N' + str(sDID) + self.timeStr + '.csv'

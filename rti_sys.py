@@ -17,10 +17,10 @@ class RTIProcess():
         setting = {
             # scenario setting
             'title': 'RTIExperiment',
-            'area_dimension': (6., 6.),
+            'area_dimension': (5., 5.),
             'voxel_dimension': (0.20, 0.20),
-            'sensing_area_position': (6., 6.),
-            'n_sensor':12,
+            'sensing_area_position': (5., 5.),
+            'n_sensor':10,
             'alpha': 1,
             'schemeType': 'SW',
             'weightalgorithm': 'EX',
@@ -62,6 +62,10 @@ class RTIProcess():
         elif msg[FrameIndex.TYPE] == FrameSymbol.BEACON:
             self.sUpdate = True
         else:
+            # print(str(msg[FrameIndex.TYPE]))
+            # print(str(FrameSymbol.CONTENT))
+            # print(str(FrameSymbol.BEACON))
+            # print("receive error")
             print(msg)
         if self.sUpdate:
             self.sUpdate = False
@@ -78,14 +82,18 @@ class RTIProcess():
                               label='Rel. Attenuation')
     
     def receive_content(self, msg):
+        print(msg)
         # msgID = int.from_bytes(msg[FrameIndex.ID])
-        # sNID = msg[FrameIndex.sNID]
+        sNID = msg[FrameIndex.sNID]
         sDID = msg[FrameIndex.sDID]
-        # print('NODE ID:' + str(sDID))
+        print('NODE ID:' + str(sDID))
+        print('NEXT ID:' + str(sNID))
         l = int.from_bytes(msg[FrameIndex.LENGTH_START:FrameIndex.MASK], 
                            "little", signed=True)
+        print(l)
         mask = int.from_bytes(msg[FrameIndex.MASK:FrameIndex.PAYLOAD], 
                               "little", signed=True)
+        print(mask)
         if mask == FrameSymbol.MASK:
             n = int(l/2-1)
             ptr = FrameIndex.PAYLOAD

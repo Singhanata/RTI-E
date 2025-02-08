@@ -25,7 +25,7 @@ def process_animate(sim):
     setting = {
         #scenario setting
         'title':'animation',
-        'area_dimension':(10.,10.),
+        'area_dimension':(5.,5.),
         'voxel_dimension':(0.20,0.20),
         'sensing_area_position':(9.,9.),
          'n_sensor':4,
