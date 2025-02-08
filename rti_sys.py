@@ -84,10 +84,10 @@ class RTIProcess():
     def receive_content(self, msg):
         print(msg)
         # msgID = int.from_bytes(msg[FrameIndex.ID])
-        sNID = msg[FrameIndex.sNID]
-        sDID = msg[FrameIndex.sDID]
+        # sNID = msg[FrameIndex.sNID]
+        sDID = msg[FrameIndex.sDID] - FrameSymbol.ID_OFFSET
         print('NODE ID:' + str(sDID))
-        print('NEXT ID:' + str(sNID))
+        # print('NEXT ID:' + str(sNID))
         l = int.from_bytes(msg[FrameIndex.LENGTH_START:FrameIndex.MASK], 
                            "little", signed=True)
         print(l)

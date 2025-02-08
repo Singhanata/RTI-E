@@ -20,3 +20,4 @@ class FrameSymbol:
     CONTENT = 0x01
     MASK = 255
     SIZE = 4
+    ID_OFFSET = 0x30
