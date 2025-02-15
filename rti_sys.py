@@ -20,7 +20,7 @@ class RTIProcess():
             'area_dimension': (5., 5.),
             'voxel_dimension': (0.20, 0.20),
             'sensing_area_position': (5., 5.),
-            'n_sensor':10,
+            'n_sensor':4,
             'alpha': 1,
             'schemeType': 'SW',
             'weightalgorithm': 'EX',
@@ -101,7 +101,7 @@ class RTIProcess():
                 rssi_vl = int.from_bytes(msg[ptr:(ptr+FrameSymbol.SIZE)], 
                                          "little", signed=True)
                 ptr+=FrameSymbol.SIZE
-                # print("RSSI: " +  str(rssi_vl))
+                print("RSSI: " +  str(rssi_vl))
                 self.input.update(rssi_vl, 'rssi', sDID, i)
             mask = int.from_bytes(msg[ptr:(ptr+FrameSymbol.SIZE)], 
                                   "little", signed=True)
