@@ -11,16 +11,16 @@ from rti_input import RTIInput
 from rti_plot import plotRTIIm #, plotDerivative
 
 class RTIProcess():
-    RECORD_SIZE = 100
+    RECORD_SIZE = 200
     
     def __init__(self, sim):
         setting = {
             # scenario setting
             'title': 'RTIExperiment',
-            'area_dimension': (5., 5.),
+            'area_dimension': (4., 7.),
             'voxel_dimension': (0.20, 0.20),
-            'sensing_area_position': (5., 5.),
-            'n_sensor':4,
+            'sensing_area_position': (4., 7.),
+            'n_sensor':12,
             'alpha': 1,
             'schemeType': 'SW',
             'weightalgorithm': 'EX',
@@ -69,7 +69,7 @@ class RTIProcess():
             print(msg)
         if self.sUpdate:
             self.sUpdate = False
-            iM = self.sim.process_input(self.input)
+            inp, iM = self.sim.process_input(self.input)
             if self.gfx_enabled:
                 for ky in iM.keys():
                     if (ky == 'ir'):
@@ -79,7 +79,8 @@ class RTIProcess():
                               path=self.savepath['gfx'],
                               filename=self.sim.getTitle('', True) + '_' + ky,
                               title=self.sim.getTitle() + "-" + ky,
-                              label='Rel. Attenuation')
+                              label='Rel. Attenuation',
+                              atten=inp[ky])
     
     def receive_content(self, msg):
         print(msg)

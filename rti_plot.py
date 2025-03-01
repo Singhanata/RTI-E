@@ -5,6 +5,7 @@ Created on Fri Oct 22 10:48:27 2021
 @author: krong
 """
 import os
+from datetime import datetime
 import numpy as np
 from rti_rec import RecordIndex
 import matplotlib.pyplot as plt
@@ -75,8 +76,14 @@ def plotRTIIm(scheme, iM, **kw):
         if 'path' in kw:
             fn = os.sep.join([kw['path'], 
                              (filename + '.svg')])
+            tStr = datetime.now().strftime('-%H%M%S')
             fn_csv = os.sep.join([kw['path'], 
-                             (filename + '.csv')])
+                             (filename + tStr + '.csv')])
+            if 'atten' in kw:
+                fn_inp = os.sep.join([kw['path'], 
+                                 ('input_'+ 
+                                  filename + tStr + '.csv')])
+                np.savetxt(fn_inp, kw['atten'], delimiter = ',', fmt = '%s')
             np.savetxt(fn_csv, iM.T, 
                        delimiter = ',', fmt = '%s')
 

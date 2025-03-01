@@ -169,7 +169,7 @@ class RTISimulation():
             # 01022025:1524: Test not to normalized the image before plot
 
             iM[key] = self.estimator.calVoxelAtten(vl, False) 
-        return iM
+        return l_atten, iM
     
     def coorD(self, **kw):
         if 'axis' in kw:
