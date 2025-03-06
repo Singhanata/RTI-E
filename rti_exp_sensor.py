@@ -5,7 +5,6 @@ Created on Wed Jan  5 10:01:53 2022
 @author: krong
 """
 import numpy as np
-
 from rti_eval import RTIEvaluation, RecordIndex
 from rti_sim_input import simulateInput, reference_object_position
 
@@ -54,13 +53,13 @@ def process_sensor(sim):
 
     obj_dim = setting['object_dimension']
     
-    ev = RTIEvaluation(**setting)
+    ev = RTIEvaluation(sim, **setting)
     
     for idx, n_s in enumerate(ev.param1):
         for idx_c, c in enumerate(ev.param2):
             # check each snr
             savepath = sim.process_routine(n_sensor=n_s, weightalgorithm=c,
-                                           **setting)
+                                           no_confirm=True, **setting)
             savepath['conc'] = sim.res_dir 
             obj_pos = reference_object_position(sim.coorD(), ['cc'], obj_dim)
             refInput = simulateInput(sim.scheme,
@@ -70,11 +69,11 @@ def process_sensor(sim):
                              form = 'cc',
                              **setting)
             for key, value in refInput.items():
+                sim.control()
                 # calculate image
                 iM = (sim.estimator.calVoxelAtten(value[0], True))
                 # result evaluation
-                ev.evaluate(sim,                        # RTI Simulation
-                            value[0],                   # Link Attenuation
+                ev.evaluate(value[0],                   # Link Attenuation
                             value[1],                   # Reference
                             iM,                         # Image
                             savepath,                   # Result Folder

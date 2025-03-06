@@ -11,10 +11,11 @@ import os
 from datetime import datetime
 
 class RTIInput():
-    def __init__(self, sz, dim, savepath, *args):
+    def __init__(self, sim, sz, dim, savepath, *args):
         self.log = {}
         self.prior = {}
         self.count = {}
+        self.sim = sim
         self.size = sz
         self.savepath = savepath
         for ar in args:
@@ -55,7 +56,7 @@ class RTIInput():
                 # ctypes.windll.user32.MessageBoxW(0, "set baseline", "warning", 1)
             self.prior[key][sDID][idx][0] = self.prior[key][sDID][idx][2]
             self.timeStr = datetime.now().strftime('_%d%m%Y_%H%M%S')
-            filename = key + ' N' + str(sDID) + self.timeStr + '.csv'
+            filename = 'N' + str(sDID) + key + self.timeStr + '.csv'
             filepath = os.sep.join([self.savepath['rec'], filename])
             np.savetxt(filepath, self.log[key][sDID], 
                        delimiter = ',', fmt = '%s')

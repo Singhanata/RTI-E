@@ -4,8 +4,6 @@ Created on Mon Dec 20 11:45:15 2021
 
 @author: krong
 """
-
-
 from rti_eval import RTIEvaluation, RecordIndex
 from rti_sim_input import reference_object_position, simulateInput
 
@@ -27,7 +25,7 @@ def process_alpha(sim):
     None.
 
     """
-    setting = {
+    sim.setting = setting = {
         #scenario setting
         'title':'alpha',
         'area_dimension':(10.,10.),
@@ -58,7 +56,7 @@ def process_alpha(sim):
             RecordIndex.DERIVATIVE_RATIO_BN]
         }
      
-    ev = RTIEvaluation(**setting)
+    ev = RTIEvaluation(sim, **setting)
     
     for idx, al in enumerate(ev.param1):
         # check each alpha 
@@ -74,11 +72,11 @@ def process_alpha(sim):
                              form = 'cc',
                              **setting)
             for key, value in refInput.items():
+                sim.control()
                 # calculate image
                 iM = (sim.estimator.calVoxelAtten(value[0], True))
                 # result evaluation
-                ev.evaluate(sim,                        # RTI Simulation
-                            value[0],                   # Link Attenuation
+                ev.evaluate(value[0],                   # Link Attenuation
                             value[1],                   # Reference
                             iM,                         # Image
                             savepath,                   # Result Folder

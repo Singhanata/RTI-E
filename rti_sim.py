@@ -4,7 +4,12 @@ Created on Thu Jun  3 18:44:39 2021
 @author: krong
 """
 import os
+import sys
+import subprocess
+import threading
 from datetime import datetime
+from rti_gui import RTIGUI
+from rti_setting import RTISetting
 
 from rti_estimator import RTIEstimator
 from rti_scheme_sideposition import SidePositionScheme
@@ -25,6 +30,14 @@ class RTISimulation():
         except:
             print('Folder ' + res_dir + ' is already exist')
         self.res_dir = res_dir
+        self.savePath = res_dir
+        self.terminate_flag = threading.Event()
+        self.save_flag = threading.Event()
+        self.execute_flag = threading.Event()
+        self.update_flag = threading.Event()
+        self.update_flag.set()
+        self.setting = RTISetting.default()
+        self.gui = RTIGUI(self)
 
     def getTitle(self, delimiter=',', short=False):
         if short:
@@ -50,6 +63,11 @@ class RTISimulation():
                 title_vx + title_SC + title_SR + title_sch + title_cal)
 
     def process_routine(self, **kw):
+        self.setting = kw
+        if not ('no_confirm' in kw): 
+            self.gui.update(None, ev='Setting')
+            kw = self.setting
+        self.control()
         ref_pos = (0., 0.)
         if 'reference_position' in kw:
             ref_pos = kw['reference_position']
@@ -184,3 +202,54 @@ class RTISimulation():
     
     def getInputDimension(self):
         return self.scheme.getInputDimension()
+    
+    def init(self):
+        mode  = RTIGUI.getMode()
+        self.setting['mode'] = mode
+        return mode
+    
+    def isPlay(self):
+        return self.execute_flag.is_set()
+    
+    def isRecord(self):
+        return self.save_flag.is_set()
+    
+    def stop(self):
+        return self.terminate_flag.is_set()
+    
+    def control(self):
+        if self.stop():
+            sys.exit()
+        self.execute_flag.wait()
+        
+    def run(self, th):
+        while True:
+            ev, vl = self.gui.read()
+            if ev == 'Exit':
+                self.execute_flag.set()
+                # self.update_flag.set()
+                self.gui.close()
+                self.terminate_flag.set()
+                th.join()
+                sys.exit()
+            
+            if ev == 'Restart':
+                self.execute_flag.set()
+                # self.update_flag.set()
+                self.gui.close()
+                self.terminate_flag.set()
+                th.join()
+                # python = sys.executable
+                # os.execl(python, python, *sys.argv)  
+                python = sys.executable
+                script = sys.argv[0]  # Current script name
+                # Start a new instance of the script
+                subprocess.Popen([python, script])  
+                # Exit the current instance (but not the Spyder kernel)
+                sys.exit(0)
+            self.update_flag.set()
+
+    def showIM(self, fig, **kw):
+        self.control()
+        self.gui.update(fig, **kw, ev='Figure')
+                

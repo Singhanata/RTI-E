@@ -4,7 +4,6 @@ Created on Mon Jan 10 14:12:11 2022
 
 @author: krong
 """
-
 from rti_eval import RTIEvaluation, RecordIndex
 from rti_sim_input import simulateInput, sim_trajectory
 
@@ -25,14 +24,14 @@ def process_animate(sim):
     setting = {
         #scenario setting
         'title':'animation',
-        'area_dimension':(5.,5.),
+        'area_dimension':(10.,10.),
         'voxel_dimension':(0.20,0.20),
         'sensing_area_position':(9.,9.),
-         'n_sensor':4,
+        'n_sensor':20,
         'alpha': 1, 
-        'schemeType':'SW',
+        'schemeType':'RE',
         'weightalgorithm':'EX',
-        # 'object_dimension': (0.5, 0.5),
+        'object_dimension': (0.5, 0.5),
         'object_type': 'human',
         #sample setting        
         'SNR': 4,
@@ -65,17 +64,17 @@ def process_animate(sim):
                                    (0.32, 0.70),
                                    (0.45, 0.61)]]]
     setting['param1'] = sim_trajectory(startpoint, traject_info)
-    ev = RTIEvaluation(**setting)
+    ev = RTIEvaluation(sim, **setting)
     for idx, v in enumerate(setting['param1']):
         refInput = simulateInput(sim.scheme,
                           sim.calculator,
                           v,
                           **setting)
         for key, value in refInput.items():
+            sim.control()
             # calculate image
             iM = (sim.estimator.calVoxelAtten(value[0], True))
-            ev.evaluate(sim,                        # RTI Simulation
-                        value[0],                   # Link Attenuation
+            ev.evaluate(value[0],                   # Link Attenuation
                         value[1],                   # Reference
                         iM,                         # Image
                         savepath,                   # Result Folder

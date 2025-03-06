@@ -11,10 +11,9 @@ from rti_input import RTIInput
 from rti_plot import plotRTIIm #, plotDerivative
 
 class RTIProcess():
-    RECORD_SIZE = 200
     
     def __init__(self, sim):
-        setting = {
+        sim.setting = setting = {
             # scenario setting
             'title': 'RTIExperiment',
             'area_dimension': (4., 7.),
@@ -29,7 +28,7 @@ class RTIProcess():
             # sample setting
             'SNR': 4,
             'SNR_mode': 2,
-            # 'sample_size' : 100,
+            'sample_size' : 100,
             # input setting
             'paramset': ['obj_pos'],
             'paramlabel': ['Object Position'],
@@ -37,8 +36,10 @@ class RTIProcess():
             # 'param2' : ['LS1','LS2','EL','EX','IN'],
             # output setting
             'gfx_enabled': True,
-            # 'record_enabled': False,
-            # 'der_plot_enabled': False,
+            'record_enabled': False,
+            'der_plot_enabled': False,
+            'hmap_range': (0, 1),
+            
             # 'frame_rate': 30
             # 'resultset': [
             #     RecordIndex.RMSE_ALL,
@@ -48,13 +49,16 @@ class RTIProcess():
 
         self.savepath = sim.process_routine(**setting)
         dim = sim.getInputDimension()
-        self.input = RTIInput(self.RECORD_SIZE, dim, self.savepath, 
+        self.input = RTIInput(sim, setting['sample_size'], dim, self.savepath, 
                               'rssi', 'ir')
         self.ready = False
         self.sUpdate = False
         self.gfx_enabled = setting['gfx_enabled'];
         self.sim = sim
         # self.ev = RTIEvaluation(**setting)
+
+    def control(self):
+        return self.sim.control()
                 
     def receive_callback(self, msg):
         if msg[FrameIndex.TYPE] == FrameSymbol.CONTENT:
@@ -74,16 +78,18 @@ class RTIProcess():
                 for ky in iM.keys():
                     if (ky == 'ir'):
                         continue
-                    plotRTIIm(self.sim.scheme,
+                    fig = plotRTIIm(self.sim.scheme,
                               iM[ky],
                               path=self.savepath['gfx'],
                               filename=self.sim.getTitle('', True) + '_' + ky,
                               title=self.sim.getTitle() + "-" + ky,
                               label='Rel. Attenuation',
+                              atten_range=self.sim.setting['hmap_range'],
                               atten=inp[ky])
+                    self.sim.showIM(fig, key='Image')
     
     def receive_content(self, msg):
-        print(msg)
+        # print(msg)
         # msgID = int.from_bytes(msg[FrameIndex.ID])
         # sNID = msg[FrameIndex.sNID]
         sDID = msg[FrameIndex.sDID] - FrameSymbol.ID_OFFSET
@@ -124,23 +130,6 @@ class RTIProcess():
         else:
             print('RSSI MASK not detected')
     
-    # def updateIM(self):
-    #     while(1):
-    #         # print("test")
-    #         if self.sUpdate:
-    #             self.sUpdate = False
-    #             iM = self.sim.process_input(self.input)
-    #             if self.gfx_enabled:
-    #                 for ky in iM.keys():
-    #                     if (ky == 'ir'):
-    #                         continue
-    #                     plotRTIIm(self.sim.scheme,
-    #                               iM[ky],
-    #                               path=self.savepath['gfx'],
-    #                               filename=self.sim.getTitle('', True) + '_' + ky,
-    #                               title=self.sim.getTitle() + "-" + ky,
-    #                               label='Rel. Attenuation')
-                
 class ReceiveThread(threading.Thread):
     def __init__(self, threadID, name, counter, rtiConn):
         threading.Thread.__init__(self)
@@ -190,105 +179,9 @@ class RTIConnection():
 
     def receive(self):
         while(1):
+            self.listener.control()
             if self.conn.in_waiting > 0:
                 msg = self.conn.readline()
                 if len(msg) > 0:
                     self.listener.receive_callback(msg)
                     
-                        
-
-        # self.histogram_log_1 = {}
-        # self.histogram_log_2 = {}
-        # self.input_1 = {}
-        # self.input_2 = {}
-        # for i in range(self.dim[0]):
-        #     self.histogram_log_1[i+1] = np.zeros([self.dim[1], self.RECORD_SIZE])
-        #     self.histogram_log_2[i+1] = np.zeros([self.dim[1], self.RECORD_SIZE])
-        #     self.input_1[i+1] = np.zeros([self.dim[1], 2])
-        #     self.input_2[i+1] = np.zeros([self.dim[1], 2])
-        # self.recordCount = np.zeros(self.dim[0], dtype=int)
-
-        # if (msg[0] == RTIConnection.START_SYM):
-        #     print(msg)
-        #     if (msg[1] != RTIConnection.TYPE_SYM):
-        #         raise Exception("Invalid Format: Missing TYPE Character")
-        #     b2 = (msg[4] == RTIConnection.TYPE_CONTENT_SYM)
-        #     if b2:
-        #         sender = msg[18:20].decode("utf-8")
-        #         sender_idx = int(sender)
-        #         print(sender)
-        #         if (msg[37] != RTIConnection.MASK_SYM):
-        #             raise Exception("Invalid Format: Missing MASK Character")
-        #         else:
-        #             # read RSSI values\
-        #             i = 38
-        #             while((i < len(msg)) and (msg[i] != RTIConnection.MASK_SYM)):
-        #                 if msg[i] != RTIConnection.START_SYM:
-        #                     if msg[i] != RTIConnection.SPACE_SYM:                                
-        #                         raise Exception(
-        #                             "Invalid Format: Missing START Character")
-        #                     else:
-        #                         i += 1
-        #                 i += 2
-        #                 n_idx = int(msg[i:(i+2)]) - 1
-        #                 print(n_idx)
-        #                 i += 2
-        #                 if msg[i] != RTIConnection.SEPARATE_SYM:
-        #                     raise Exception(
-        #                         "Invalid Format: Missing SEPARATE Character")
-        #                 i += 1
-        #                 rssi_vl = 0
-        #                 if msg[i] == 0x2D:
-        #                     rssi_vl = int(msg[i:(i+3)])
-        #                     i += 3
-        #                 else:
-        #                     rssi_vl = int(msg[i:(i+2)])
-        #                     i += 2
-        #                 print(self.recordCount[(sender_idx-1)])
-        #                 self.histogram_log_1[sender_idx][n_idx][self.recordCount[(sender_idx-1)]] = rssi_vl
-        #                 print(self.histogram_log_1[sender_idx][n_idx][self.recordCount[sender_idx-1]])
-        #                 if msg[i] != RTIConnection.STOP_SYM:
-        #                     raise Exception(
-        #                         "Invalid Format: Missing STOP Character")
-        #                 i += 1
-
-        #             i += 1
-        #             while(i < (len(msg)-2)):
-        #                 if msg[i] != RTIConnection.START_SYM:
-        #                     if msg[i] !=  RTIConnection.SPACE_SYM:
-        #                         raise Exception(
-        #                             "Invalid Format: Missing START Character")
-        #                     else:
-        #                         i += 1
-        #                 i += 2
-        #                 n_idx = int(msg[i:(i+2)]) - 1
-        #                 print(n_idx)
-        #                 i += 2
-        #                 if msg[i] != RTIConnection.SEPARATE_SYM:
-        #                     raise Exception(
-        #                         "Invalid Format: Missing SEPARATE Character")
-        #                 i += 1
-        #                 ir_vl = 0
-        #                 if msg[i] == 0x2D:
-        #                     ir_vl = int(msg[i:(i+5)])
-        #                     i += 5
-        #                 else:
-        #                     ir_vl = int(msg[i:(i+4)])
-        #                     i += 4
-        #                 self.histogram_log_2[sender_idx][n_idx][self.recordCount[sender_idx-1]] = ir_vl
-        #                 print(self.histogram_log_2[sender_idx][n_idx][self.recordCount[sender_idx-1]])
-        #                 if msg[i] != RTIConnection.STOP_SYM:
-        #                     raise Exception(
-        #                         "Invalid Format: Missing STOP Character")
-        #                 i += 1
-        #             self.recordCount[sender_idx-1] += 1
-        #             print(self.recordCount[sender_idx-1])
-        #             if self.recordCount[sender_idx-1] >= self.RECORD_SIZE:
-        #                 self.timeStr = datetime.now().strftime('_%d%m%Y_%H%M%S')
-        #                 filename = 'RSSI N' + str(sender_idx) + self.timeStr + '.csv'
-        #                 filepath = os.sep.join([self.savepath['rec'], filename])
-        #                 np.savetxt(filepath, self.histogram_log_1[sender_idx], delimiter = ',', fmt = '%s')
-        #                 filename = 'IR N' + str(sender_idx) + self.timeStr + '.csv'
-        #                 filepath = os.sep.join([self.savepath['rec'], filename])
-        #                 np.savetxt(filepath, self.histogram_log_2[sender_idx], delimiter = ',', fmt = '%s')
-        #                 self.recordCount[sender_idx-1] = 0

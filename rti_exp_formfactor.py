@@ -58,7 +58,7 @@ def process_formfactor(sim):
         }     
 
     savepath = sim.process_routine(**setting)
-    ev = RTIEvaluation(**setting)
+    ev = RTIEvaluation(sim, **setting)
 
     for i, x in enumerate(setting['param1']):
         
@@ -72,9 +72,9 @@ def process_formfactor(sim):
                          form = 'cc',
                          **setting)
         for key, value in refInput.items():
+            sim.control()
             iM = (sim.estimator.calVoxelAtten(value[0], True))
-            ev.evaluate(sim,                        # RTI Simulation
-                        value[0],                   # Link Attenuation
+            ev.evaluate(value[0],                   # Link Attenuation
                         value[1],                   # Reference
                         iM,                         # Image
                         savepath,                   # Result Folder

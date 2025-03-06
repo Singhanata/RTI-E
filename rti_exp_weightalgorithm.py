@@ -27,7 +27,7 @@ def process_weightalgorithm(sim):
         'area_dimension':(10.,10.),
         'voxel_dimension':(0.25,0.25),
         'sensing_area_position':(9.,9.),
-        # 'n_sensor':20,
+        'n_sensor':20,
         'alpha': 1, 
         'schemeType':'SW',
         # 'weightalgorithm':'LS',
@@ -56,10 +56,11 @@ def process_weightalgorithm(sim):
 
     obj_dim = setting['object_dimension']
     
-    ev = RTIEvaluation(**setting)
+    ev = RTIEvaluation(sim, **setting)
     
     for idx, w in enumerate(ev.param1):
-        savepath = sim.process_routine(weightalgorithm=w, **setting)
+        savepath = sim.process_routine(weightalgorithm=w, 
+                                       no_confirm=True, **setting)
         # for idx_snr, sn in enumerate(ev.param2):
             # check each snr
         obj_pos = reference_object_position(sim.coorD(), ['cc'], obj_dim)
@@ -70,11 +71,11 @@ def process_weightalgorithm(sim):
                          form = 'cc',
                          **setting)
         for key, value in refInput.items():
+            sim.control()
             # calculate image
             iM = (sim.estimator.calVoxelAtten(value[0], True))
             # result evaluation
-            ev.evaluate(sim,                        # RTI Simulation
-                        value[0],                   # Link Attenuation
+            ev.evaluate(value[0],                   # Link Attenuation
                         value[1],                   # Reference
                         iM,                         # Image
                         savepath,                   # Result Folder
