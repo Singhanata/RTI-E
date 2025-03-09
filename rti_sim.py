@@ -4,8 +4,15 @@ Created on Thu Jun  3 18:44:39 2021
 @author: krong
 """
 import os
+import sys
+import subprocess
+import threading
+import json
+import copy
 from datetime import datetime
-
+from rti_rec import RecordIndex
+from rti_gui import RTIGUI, select_open_folder
+from rti_setting import RTISetting
 from rti_estimator import RTIEstimator
 from rti_scheme_sideposition import SidePositionScheme
 from rti_scheme_rectangular import RectangularScheme
@@ -13,7 +20,6 @@ from rti_cal_linesegment import LineWeightingRTICalculator
 from rti_cal_ellipse import EllipseRTICalculator
 from rti_cal_expdecay import ExpDecayRTICalculator
 from rti_cal_invarea import InvAreaRTICalculator
-
 
 class RTISimulation():
     def __init__(self):
@@ -25,6 +31,14 @@ class RTISimulation():
         except:
             print('Folder ' + res_dir + ' is already exist')
         self.res_dir = res_dir
+        self.savePath = res_dir
+        self.terminate_flag = threading.Event()
+        self.save_flag = threading.Event()
+        self.execute_flag = threading.Event()
+        # self.update_flag = threading.Event()
+        # self.update_flag.set()
+        self.setting = RTISetting.default()
+        self.gui = RTIGUI(self)
 
     def getTitle(self, delimiter=',', short=False):
         if short:
@@ -50,6 +64,11 @@ class RTISimulation():
                 title_vx + title_SC + title_SR + title_sch + title_cal)
 
     def process_routine(self, **kw):
+        self.setting = kw
+        if not ('no_confirm' in kw): 
+            self.gui.update(None, ev='Setting')
+            kw = self.setting
+        self.control()
         ref_pos = (0., 0.)
         if 'reference_position' in kw:
             ref_pos = kw['reference_position']
@@ -129,35 +148,27 @@ class RTISimulation():
         if 'title' in kw:
             title += kw['title'] + '-'
         fdn = os.sep.join([fdn, (title + self.getTitle('', True))])
-        try:
-            os.mkdir(fdn)
-        except:
-            pass
+        try: os.mkdir(fdn)
+        except: pass
             # print('Folder ' + fdn + ' is already exist')
         fn_fig = os.sep.join([fdn, 'fig'])
-        try:
-            os.mkdir(fn_fig)
-        except:
-            pass
+        try: os.mkdir(fn_fig)
+        except:pass
             # print('Folder ' + fn_fig + ' is already exist')
         fn_rec = os.sep.join([fdn, 'rec'])
-        try:
-            os.mkdir(fn_rec)
-        except:
-            pass
+        try: os.mkdir(fn_rec) 
+        except: pass
             # print('Folder ' + fn_rec + ' is already exist')
         fn_con = os.sep.join([fdn, 'conc'])
-        try:
-            os.mkdir(fn_con)
-        except:
-            pass
+        try: os.mkdir(fn_con)
+        except: pass
             # print('Folder ' + fn_con + ' is already exist')
-
         save_path = {}
         save_path['gfx'] = fn_fig
         save_path['rec'] = fn_rec
         save_path['conc'] = fn_con
         print('sim create.. ' + self.getTitle())
+        self.saveSetting(self.setting, fdn)
         return save_path
     
     def process_input(self, inp):
@@ -182,5 +193,84 @@ class RTISimulation():
                 raise ValueError('axis not defined')
         return (self.scheme.coordX, self.scheme.coordY)
     
-    def getInputDimension(self):
-        return self.scheme.getInputDimension()
+    def getInputDimension(self): return self.scheme.getInputDimension()
+    
+    def getNEI(self, sDID, idx): 
+        try: return self.scheme.getNEI(idx)
+        except AttributeError: return idx
+    
+    def init(self):
+        mode  = RTIGUI.getMode(self)
+        self.setting['mode'] = mode
+        return mode
+    
+    def isPlay(self):
+        return self.execute_flag.is_set()
+    
+    def isRecord(self):
+        return self.save_flag.is_set()
+    
+    def stop(self):
+        return self.terminate_flag.is_set()
+    
+    def control(self):
+        if self.stop():
+            sys.exit()
+        self.execute_flag.wait()
+        
+    def run(self, th):
+        while True:
+            ev, vl = self.gui.read()
+            if ev == 'Record':
+                self.saveSetting(self.setting, self.savePath)
+                
+            if ev == 'Exit':
+                self.execute_flag.set()
+                # self.update_flag.set()
+                self.gui.close()
+                self.terminate_flag.set()
+                th.join()
+                sys.exit()
+            
+            if ev == 'Restart':
+                self.execute_flag.set()
+                # self.update_flag.set()
+                self.gui.close()
+                self.terminate_flag.set()
+                th.join()
+                # python = sys.executable
+                # os.execl(python, python, *sys.argv)  
+                python = sys.executable
+                script = sys.argv[0]  # Current script name
+                # Start a new instance of the script
+                subprocess.Popen([python, script])  
+                # Exit the current instance (but not the Spyder kernel)
+                sys.exit(0)
+            # self.update_flag.set()
+
+    def showIM(self, fig, **kw):
+        self.control()
+        self.gui.update(fig, **kw, ev='Figure')
+    
+    def showLink(self, vl):
+        self.gui.update(vl, ev='Input')
+    
+def saveSetting(setting_, path):
+    setting = copy.deepcopy(setting_)
+    if 'resultset' in setting:
+        setting['resultset'] = [en.name for en in setting['resultset']]
+    fn = os.sep.join([path, "settings.json"])
+    try:
+        with open(fn, "w") as f:
+            json.dump(setting, f, indent=4) #Pretty print with indentation
+    except PermissionError: print('Permission denied')
+
+def loadSetting(**kw):
+    path = select_open_folder('empirical_data', **kw)
+    if path:
+        fn = os.sep.join([path, "settings.json"])
+        with open(fn, "r") as f:
+            setting = json.load(f)
+            if 'resultset' in setting:
+                setting['resultset'] = [RecordIndex[n] for n in setting['resultset']]
+    return setting        

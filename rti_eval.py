@@ -12,7 +12,8 @@ from rti_plot import plotRTIIm, plotDerivative, process_boxplot, process_plot
 
 
 class RTIEvaluation:
-    def __init__(self, **kw):
+    def __init__(self, sim, **kw):
+        self.sim = sim
         self.paramset = kw['paramset']
         if 'paramlabel' in kw:
             self.paramlabel = kw['paramlabel']
@@ -21,6 +22,7 @@ class RTIEvaluation:
         self.resultset = kw['resultset']
         self.gfx_enabled = False
         self.rec_enabled = False
+        self.der_plot_enabled = False
         if 'gfx_enabled' in kw:
             self.gfx_enabled = kw['gfx_enabled']
         if 'der_plot_enabled' in kw:
@@ -45,7 +47,8 @@ class RTIEvaluation:
         for l in self.resultset:
             self.data[l] = np.zeros(datadim)
 
-    def evaluate(self, sim, l_a, reF, imagE, savepath, key, **kw):
+    def evaluate(self, l_a, reF, imagE, savepath, key, **kw):
+        sim = self.sim
         # evaluation of RMSE
         r = RMSEEvaluation(reF, imagE)
         # evaluation of image derivative
@@ -62,6 +65,14 @@ class RTIEvaluation:
             der_plot = kw['der_plot_enabled']
         if 'add_title' in kw:
             atitle = kw['add_title'] + '-'
+        gkw = {'path' : savepath['gfx'],
+               'filename' : sim.getTitle('', True) + '_' + key,
+               'title' : atitle + key + '-' + sim.getTitle()
+               }
+
+        if sim.isRecord():
+            gkw['save'] = sim.savePath
+            
         for i, e in enumerate(self.resultset):
             if len(self.data[e].shape) == 1:
                 self.data[e][kw['data_idx1']] = r[e]
@@ -82,25 +93,29 @@ class RTIEvaluation:
                           image=imagE,
                           ev=r)
         if gfx_e:
-            plotRTIIm(sim.scheme,
+            fig = plotRTIIm(sim.scheme,
                       imagE,
-                      path=savepath['gfx'],
-                      filename=sim.getTitle('', True) + '_' + key,
-                      title=atitle + key + '-' + sim.getTitle(),
+                      **gkw,
+                      # path=savepath['gfx'],
+                      # filename=sim.getTitle('', True) + '_' + key,
+                      # title=atitle + key + '-' + sim.getTitle(),
                       label='Rel. Attenuation',
                       rmse=r[RecordIndex.RMSE_ALL])
+            sim.showIM(fig, key = 'Image')
         if der_plot:
-            plotDerivative(sim.scheme,
+            fig = plotDerivative(sim.scheme,
                            r,
-                           path=savepath['gfx'],
-                           filename=sim.getTitle('', True) + '_' + key,
-                           title=atitle + key + '-' + sim.getTitle(),
+                           **gkw,
+                           # path=savepath['gfx'],
+                           # filename=sim.getTitle('', True) + '_' + key,
+                           # title=atitle + key + '-' + sim.getTitle(),
                            label='Derivative of Attenuation',
                            caption='border@'
                            + '{:.3f}'.format(r[RecordIndex.DERIVATIVE_BORDERRATIO])
                            + ', '
                            + 'non-border@'
                            + '{:.3f}'.format(r[RecordIndex.DERIVATIVE_NONBORDERRATIO]))
+            sim.showIM(fig, key = 'Derivative')
         return r
 
     def conclude(self, savepath, setting, **kw):
@@ -135,14 +150,14 @@ class RTIEvaluation:
                     xlabel = self.paramlabel[1]
                     for i, v in enumerate(self.param1):
                         tlv = p + '@' + str(v) + ptitle
-                        process_boxplot(self.data[e][i].T,
+                        fig = process_boxplot(self.data[e][i].T,
                                         title=tlv,
                                         xlabel=xlabel,
                                         ylabel=yLabel,
                                         ticklabel=self.param2,
                                         path=savepath,
                                         filename=e.short + '-' + tlv)
-
+                        self.sim.showIM(fig, key='Conclusion')
                 for e in self.resultset:
                     yLabel = e.name
                     p = self.paramset[1]
@@ -152,13 +167,14 @@ class RTIEvaluation:
                         data = []
                         for j in range(len(self.param1)):
                             data.append(self.data[e][j][i])
-                        process_boxplot(data,
+                        fig = process_boxplot(data,
                                         title=tlv,
                                         xlabel=xlabel,
                                         ylabel=yLabel,
                                         ticklabel=self.param1,
                                         path=savepath,
                                         filename=e.short + '-' + tlv)
+                        self.sim.showIM(fig, key='Conclusion')
             if kw['gfx'] == 'imshow':
                 for e in self.resultset:
                     if hasattr(self, 'sample_size'):
@@ -166,26 +182,28 @@ class RTIEvaluation:
                     else:
                         dt = self.data[e]
                     yLabel = e.name
-                    plotRTIIm(kw['scheme'],
+                    fig = plotRTIIm(kw['scheme'],
                               dt,
                               path=savepath,
                               filename=e.short + '-' + ptitle,
                               title=ptitle,
                               label=yLabel,
                               color='BrBG')
+                    self.sim.showIM(fig, key='Conclusion')
             if kw['gfx'] == 'plot':
                 if hasattr(self, 'param2'):
                     raise Exception('plot process and parameter mismatch')
-                process_plot(self.data,
+                fig = process_plot(self.data,
                              title=ptitle,
                              path=savepath,
                              filename=ptitle,
                              xlabel=self.paramlabel[0],
                              X=self.param1,
                              **kw)
+                self.sim.showIM(fig, key='Conclusion')
                 i = 0
                 for k, e in self.data.items():
-                    process_plot(e,
+                    fig = process_plot(e,
                                  title=ptitle,
                                  path=savepath,
                                  filename=k.short + '-' + ptitle,
@@ -194,6 +212,7 @@ class RTIEvaluation:
                                  graphindex=i,
                                  X=self.param1,
                                  **kw)
+                    self.sim.showIM(fig, key='Conclusion')
                     i += 1
 
 

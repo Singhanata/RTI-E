@@ -4,7 +4,6 @@ Created on Tue Jan  4 10:39:09 2022
 
 @author: krong
 """
-
 from rti_eval import RTIEvaluation, RecordIndex
 from rti_sim_input import simulateInput, reference_object_position
 
@@ -58,10 +57,11 @@ def process_voxel(sim):
 
     obj_dim = setting['object_dimension']
     
-    ev = RTIEvaluation(**setting)
+    ev = RTIEvaluation(sim, **setting)
     
     for idx, vx in enumerate(ev.param1):
-        savepath = sim.process_routine(voxel_dimension=(vx,vx), **setting)
+        savepath = sim.process_routine(voxel_dimension=(vx,vx), 
+                                       no_confirm=True, **setting)
         for idx_snr, sn in enumerate(ev.param2):
             # check each snr
             obj_pos = reference_object_position(sim.coorD(), ['cc'], obj_dim)
@@ -72,11 +72,11 @@ def process_voxel(sim):
                              form = 'cc',
                              **setting)
             for key, value in refInput.items():
+                sim.control()
                 # calculate image
                 iM = (sim.estimator.calVoxelAtten(value[0], True))
                 # result evaluation
-                ev.evaluate(sim,                        # RTI Simulation
-                            value[0],                   # Link Attenuation
+                ev.evaluate(value[0],                   # Link Attenuation
                             value[1],                   # Reference
                             iM,                         # Image
                             savepath,                   # Result Folder
