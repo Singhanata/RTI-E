@@ -7,10 +7,12 @@ import os
 import sys
 import subprocess
 import threading
+import json
+import copy
 from datetime import datetime
-from rti_gui import RTIGUI
+from rti_rec import RecordIndex
+from rti_gui import RTIGUI, select_open_folder
 from rti_setting import RTISetting
-
 from rti_estimator import RTIEstimator
 from rti_scheme_sideposition import SidePositionScheme
 from rti_scheme_rectangular import RectangularScheme
@@ -18,7 +20,6 @@ from rti_cal_linesegment import LineWeightingRTICalculator
 from rti_cal_ellipse import EllipseRTICalculator
 from rti_cal_expdecay import ExpDecayRTICalculator
 from rti_cal_invarea import InvAreaRTICalculator
-
 
 class RTISimulation():
     def __init__(self):
@@ -34,8 +35,8 @@ class RTISimulation():
         self.terminate_flag = threading.Event()
         self.save_flag = threading.Event()
         self.execute_flag = threading.Event()
-        self.update_flag = threading.Event()
-        self.update_flag.set()
+        # self.update_flag = threading.Event()
+        # self.update_flag.set()
         self.setting = RTISetting.default()
         self.gui = RTIGUI(self)
 
@@ -147,35 +148,27 @@ class RTISimulation():
         if 'title' in kw:
             title += kw['title'] + '-'
         fdn = os.sep.join([fdn, (title + self.getTitle('', True))])
-        try:
-            os.mkdir(fdn)
-        except:
-            pass
+        try: os.mkdir(fdn)
+        except: pass
             # print('Folder ' + fdn + ' is already exist')
         fn_fig = os.sep.join([fdn, 'fig'])
-        try:
-            os.mkdir(fn_fig)
-        except:
-            pass
+        try: os.mkdir(fn_fig)
+        except:pass
             # print('Folder ' + fn_fig + ' is already exist')
         fn_rec = os.sep.join([fdn, 'rec'])
-        try:
-            os.mkdir(fn_rec)
-        except:
-            pass
+        try: os.mkdir(fn_rec) 
+        except: pass
             # print('Folder ' + fn_rec + ' is already exist')
         fn_con = os.sep.join([fdn, 'conc'])
-        try:
-            os.mkdir(fn_con)
-        except:
-            pass
+        try: os.mkdir(fn_con)
+        except: pass
             # print('Folder ' + fn_con + ' is already exist')
-
         save_path = {}
         save_path['gfx'] = fn_fig
         save_path['rec'] = fn_rec
         save_path['conc'] = fn_con
         print('sim create.. ' + self.getTitle())
+        self.saveSetting(self.setting, fdn)
         return save_path
     
     def process_input(self, inp):
@@ -200,11 +193,14 @@ class RTISimulation():
                 raise ValueError('axis not defined')
         return (self.scheme.coordX, self.scheme.coordY)
     
-    def getInputDimension(self):
-        return self.scheme.getInputDimension()
+    def getInputDimension(self): return self.scheme.getInputDimension()
+    
+    def getNEI(self, sDID, idx): 
+        try: return self.scheme.getNEI(idx)
+        except AttributeError: return idx
     
     def init(self):
-        mode  = RTIGUI.getMode()
+        mode  = RTIGUI.getMode(self)
         self.setting['mode'] = mode
         return mode
     
@@ -225,6 +221,9 @@ class RTISimulation():
     def run(self, th):
         while True:
             ev, vl = self.gui.read()
+            if ev == 'Record':
+                self.saveSetting(self.setting, self.savePath)
+                
             if ev == 'Exit':
                 self.execute_flag.set()
                 # self.update_flag.set()
@@ -247,9 +246,31 @@ class RTISimulation():
                 subprocess.Popen([python, script])  
                 # Exit the current instance (but not the Spyder kernel)
                 sys.exit(0)
-            self.update_flag.set()
+            # self.update_flag.set()
 
     def showIM(self, fig, **kw):
         self.control()
         self.gui.update(fig, **kw, ev='Figure')
-                
+    
+    def showLink(self, vl):
+        self.gui.update(vl, ev='Input')
+    
+def saveSetting(setting_, path):
+    setting = copy.deepcopy(setting_)
+    if 'resultset' in setting:
+        setting['resultset'] = [en.name for en in setting['resultset']]
+    fn = os.sep.join([path, "settings.json"])
+    try:
+        with open(fn, "w") as f:
+            json.dump(setting, f, indent=4) #Pretty print with indentation
+    except PermissionError: print('Permission denied')
+
+def loadSetting(**kw):
+    path = select_open_folder('empirical_data', **kw)
+    if path:
+        fn = os.sep.join([path, "settings.json"])
+        with open(fn, "r") as f:
+            setting = json.load(f)
+            if 'resultset' in setting:
+                setting['resultset'] = [RecordIndex[n] for n in setting['resultset']]
+    return setting        

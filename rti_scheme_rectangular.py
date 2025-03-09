@@ -171,26 +171,31 @@ class RectangularScheme(RTIScheme):
 
         sx_distance = self.area_width / (self._nx)
         sy_distance = self.area_length / (self._ny)
-
+        
+        idx = 0
         leftSideSensorS = []
         s_pos_y = np.arange(0.0, self.area_length, sy_distance)
         for pos_y in s_pos_y:
-            leftSideSensorS.append(Sensor((0.0, pos_y)))
+            idx += 1
+            leftSideSensorS.append(Sensor(idx,(0.0, pos_y)))
 
         topSideSensorS = []
         s_pos_x = np.arange(0.0, self.area_width, sx_distance)
         for pos_x in s_pos_x:
-            topSideSensorS.append(Sensor((pos_x, self.area_length)))
+            idx += 1
+            topSideSensorS.append(Sensor(idx,(pos_x, self.area_length)))
 
         rightSideSensorS = []
         s_pos_y = np.arange(self.area_length, 0.0, (-1) * sy_distance)
         for pos_y in s_pos_y:
-            rightSideSensorS.append(Sensor((self.area_width, pos_y)))
+            idx += 1
+            rightSideSensorS.append(Sensor(idx,(self.area_width, pos_y)))
 
         bottomSideSensorS = []
         s_pos_x = np.arange(self.area_width, 0.0, (-1) * sx_distance)
         for pos_x in s_pos_x:
-            bottomSideSensorS.append(Sensor((pos_x, 0.0)))
+            idx += 1
+            bottomSideSensorS.append(Sensor(idx,(pos_x, 0.0)))
 
         sensorS = tuple([leftSideSensorS, topSideSensorS, rightSideSensorS, bottomSideSensorS])
         return sensorS

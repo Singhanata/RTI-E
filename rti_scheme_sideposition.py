@@ -74,11 +74,14 @@ class SidePositionScheme(RTIScheme):
                               int(self.n_sensor/2))
         leftSideSensorS = []
         rightSideSensorS = []
+        idx = 0
         for y in s_pos_y:
-            leftSideSensorS.append(Sensor((self.rtiGrid.min_x, y)))
-            rightSideSensorS.append(Sensor((self.rtiGrid.max_x, y)))
+            idx += 1
+            leftSideSensorS.append(Sensor(idx, (self.rtiGrid.min_x, y)))
+            idx += 1
+            rightSideSensorS.append(Sensor(idx, (self.rtiGrid.max_x, y)))
 
-        sensorS = tuple([leftSideSensorS, rightSideSensorS])
+        sensorS = (leftSideSensorS, rightSideSensorS)
         return sensorS
 
     def initLinks(self):
@@ -117,6 +120,12 @@ class SidePositionScheme(RTIScheme):
     
     def getInputDimension(self):
         return [int(self.n_sensor), int(self.n_sensor/2)]
+    
+    def getNEI(self, sDID, idx):
+        nei = 2 * idx + 1 
+        if not sDID % 2 == 0: 
+            nei = 2 * (idx + 1)
+        return nei
     
     def getSetting(self):
         se = super().getSetting()

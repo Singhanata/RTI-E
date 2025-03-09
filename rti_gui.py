@@ -7,10 +7,16 @@ Created on Tue Mar  4 18:40:48 2025
 
 import PySimpleGUI as sg
 import matplotlib.pyplot as plt
+import numpy as np
+import queue
+import time
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from rti_rec import RecordIndex
+from rti_input import PriorIndex
 import os
 import gc
+
+sg.theme("LightGrey1")
 
 version = __version__ = "0.0.1 Released 15-Feb-2025"
 
@@ -19,10 +25,13 @@ class RTIGUI():
         self.sim = sim
         self.canvas = None     # Persistant storage to avoid garbage collection
         self.N_FIGURE = 10
-        self.gc_control = [10,0]
+        self.gc_control = [8,0]
+        self.fig_update_queue = queue.Queue(maxsize=5)  # Limit pending events to 5
+        self.input_update_queue = queue.Queue(maxsize=3)# Limit pending events to 5
         # Build GUI
         self.window = self._create_gui()
         sg.set_options(keep_on_top=True)
+        gc.collect()
                 
         
     def read(self):
@@ -37,44 +46,58 @@ class RTIGUI():
             ev = 'Exit'
         
         if (ev == '-UPDATEFIG-'):
+            if not self.fig_update_queue.empty():
+                self.fig_update_queue.get()  # Remove processed event
             fig = vl['-UPDATEFIG-'][0]
             key = vl['-UPDATEFIG-'][1]
             self.draw_plot(fig, key)
             
         if (ev == '-UPDATESETTING-'):
+            if not self.input_update_queue.empty():
+                self.input_update_queue.get()  # Remove processed event
             self.inputSetting()
+            
+        if (ev == '-UPDATEINPUT-'):
+            self.write_input(vl['-UPDATEINPUT-'])
 
         self.menu_listener(ev, vl)
+        self.gc_collect()
             
         return ev, vl
     
     def menu_listener(self, ev, vl):
             
         if (ev == 'Result'):
-            openFolder(self.sim.res_dir)
+            if self.sim.isRecord(): openFolder(self.sim.savePath)
+            else: openFolder(self.sim.res_dir)
         
         if ev in ('Play', 'Resume'):
             self.sim.execute_flag.set()
             self.getMenu()
         
-        if ev in ('✓ Play', 'Pause'):
+        if ev in ('✔ Play', 'Pause'):
             self.sim.execute_flag.clear()
             self.getMenu()
             
         if ev == 'Record':
-            fPath = select_open_folder(self.sim.res_dir)
+            fPath = select_open_folder(self.sim.res_dir, title='RECORD',
+                                       text='Select Foler for Record:')
             if not fPath:
                 return
             try: 
                 os.mkdir(fPath, exist_ok=True)
-                self.sim.savePath = fPath
             except:
                 Exception('Unsuccessful make directory')
+            self.sim.savePath = fPath
+            txt = 'Current Folder: ' + fPath
+            self.window['-SAVEPATH-'].update(txt)
+
             self.sim.save_flag.set()
             self.getMenu()
 
-        if ev in ('✓ Record', 'Stop'):
+        if ev in ('✔ Record', 'Stop'):
             self.sim.save_flag.clear()
+            self.window['-SAVEPATH-'].update('Current Folder: ' + self.sim.res_dir)
             self.getMenu()
             
         if ev == 'Properties':
@@ -82,29 +105,45 @@ class RTIGUI():
     
     def showSetting(self):
         data = self.sim.setting
-        data['resultset'] = [en.short for en in data['resultset']] 
+        resSet = [en.short for en in data['resultset']] 
         table_data = [[key, value] for key, value in data.items()]
+        for row in table_data:
+            if row[0] == 'resultset':
+                row[1] = resSet
         layout = [
             [sg.Table(values=table_data, headings=["Key", "Value"], 
                       auto_size_columns=True,
                       max_col_width=20,
                       justification='left',
-                      alternating_row_color='grey',
+                      alternating_row_color='lightblue',
                       expand_x=True,
                       expand_y=True,
                       num_rows=len(data))],
-            [sg.Button("OK")]]
+            [sg.Button('SAVE'), sg.Button("OK")]]
 
         window = sg.Window("Setting", layout, finalize=True)
-        
+        stamp = time.time()
         while True:
             event, _ = window.read()
             if event in (sg.WIN_CLOSED, "OK"):
                 break
-        
+            if event == 'SAVE':
+                path = select_open_folder(self.sim.res_dir, 
+                                          title='SAVE SETTING')
+                self.sim.saveSetting(data, path)
+            if time.time() - stamp > 0.5: self.gc_collect()
         window.close()
     
     def inputSetting(self):
+        """
+        Get setting from GUI to confirm initial setting and update input values
+        to the setting reference.
+
+        Returns
+        -------
+        None.
+
+        """
         # Default settings dictionary
         setting = self.sim.setting
         
@@ -117,33 +156,22 @@ class RTIGUI():
         SNR = 0
         SNRMode = 2
         
-        try:
-            sampleSize = setting['sample_size']
-        except:
-            pass
-        try:
-            n_sensor = setting['n_sensor']
-        except:
-            pass
+        try: sampleSize = setting['sample_size']
+        except: pass
+        try: n_sensor = setting['n_sensor']
+        except: pass
         try:
             paramset = setting['paramset']
             paramlabel = setting['paramlabel']
-        except:
-            pass
-        try:
-            derEnabled = setting['der_plot_enabled']
-        except:
-            pass
-        try:
-            recEnabled = setting['record_enabled']
-        except:
-            pass
+        except: pass
+        try: derEnabled = setting['der_plot_enabled']
+        except: pass
+        try: recEnabled = setting['record_enabled']
+        except: pass
         try:
             SNR = setting['SNR']
             SNRMode = setting['SNR_Mode']
-        except:
-             pass   
-        
+        except: pass   
         # GUI Layout
         layout = [
             [sg.Text("Title:"), sg.InputText(setting['title'], key="TITLE")],
@@ -189,7 +217,7 @@ class RTIGUI():
 
         # Create window
         window = sg.Window("Settings", layout)
-
+        stamp = time.time()
         while True:
             event, values = window.read()
         
@@ -265,7 +293,16 @@ class RTIGUI():
                     Exception('resultset cannot be set')
                 self.showSetting()
                 break
+            if time.time() - stamp > 0.5: self.gc_collect()
         window.close()
+
+    def gc_collect(self):
+        #Cleaning up unused objects to avoid call __del__ outside main loop
+        # Force cleanup of unused objects
+        self.gc_control[1] += 1
+        if self.gc_control[1] >= self.gc_control[0]:
+            gc.collect()
+            self.gc_control[1] = 0
 
         
     def close(self):
@@ -273,14 +310,23 @@ class RTIGUI():
         sg.set_options(force_modal_windows=sg.DEFAULT_MODAL_WINDOWS_FORCED)
     
     def update(self, vl, **kw):
-        if not self.sim.update_flag.is_set():
-            return
+        # if not self.sim.update_flag.is_set():
+        #     return
         if kw['ev'] == 'Figure':
+            if self.fig_update_queue.full(): 
+                print('Figure update queue is full. Figure cannot be updated')
+                return
+            self.fig_update_queue.put(1)
             self.window.write_event_value('-UPDATEFIG-', (vl, kw['key']))
         if kw['ev'] == 'Setting':
             self.window.write_event_value('-UPDATESETTING-', None)
-        self.sim.update_flag.clear()
-
+        if kw['ev'] == 'Input':
+            self.input_update_queue.put(1)
+            if self.input_update_queue.full(): 
+                print('Input update queue is full. Input cannot be updated')
+                return
+            self.window.write_event_value('-UPDATEINPUT-', vl)
+        # self.sim.update_flag.clear()
     def draw_plot(self, fig, key):
         if self.window.was_closed():
             return
@@ -298,20 +344,48 @@ class RTIGUI():
                 self.canvas.get_tk_widget().destroy()
             # for widget in canvas_elem.Widget.winfo_children():
             #     widget.destroy()
-            
             self.canvas = FigureCanvasTkAgg(fig, canvas_elem.Widget)
             self.canvas.draw()
             self.canvas.get_tk_widget().pack(side='top', fill='both', expand=1)
             canvas_elem.metadata = self.canvas
-            # Force cleanup of unused objects
-            self.gc_control[1] += 1
-            if self.gc_control[1] >= self.gc_control[0]:
-                gc.collect()
-                self.gc_control[1] = 0
-        except:
-            Exception('Unsuccessful update Figure')
+        except: Exception('Unsuccessful update Figure')
         
-    def getMode():
+    def write_input(self, vl):
+        try: 
+            if self.window.was_closed(): return
+        except AttributeError: pass
+        # Convert Dict to TreeData Format
+        prior = vl[0]
+        nCount = vl[1]
+        nCheck = vl[2]
+        tree_data = sg.TreeData()
+        for key, vl in prior.items():
+            if key == 'ir':
+                continue
+            for sDID, v in vl.items():
+                snKey = snTxt = f'N{sDID}'
+                if nCheck[1][sDID-1]: snTxt = snTxt + '!!!'
+                lTime = time.time() - nCheck[0][sDID-1]
+                tStr = [time.strftime("%Hh", time.gmtime(lTime)),
+                        time.strftime("%Mm", time.gmtime(lTime)),
+                        time.strftime("%Ss", time.gmtime(lTime))]
+                tree_data.Insert('', snKey, snTxt, ['Last','ping',*tStr,'ago'])
+                for idx, r in enumerate(v):
+                    nei = self.sim.getNEI(sDID, idx)
+                    lkKey = f'L{sDID}-{nei}'
+                    if r[PriorIndex.STD.value] == 0: nSigma = 0
+                    else: nSigma = ((r[PriorIndex.BASE.value]-
+                               r[PriorIndex.ATTEN.value])-
+                              r[PriorIndex.MEAN.value])/r[PriorIndex.STD.value]
+                    data = r[:-1]
+                    data = np.append(data, [nCount[key][sDID-1][idx], nSigma])
+                    tree_data.Insert(snKey, lkKey, lkKey, data)
+        try: 
+            self.window['-NODEINFO-'].update(tree_data)
+        except AttributeError: pass        
+        return tree_data
+                
+    def getMode(self):
         # Define the layout
         layout = [
             [sg.Text("Choose an operation mode:")],
@@ -331,12 +405,14 @@ class RTIGUI():
         window = sg.Window("Choice Window", layout)
         
         # Event loop
+        stamp = time.time()
         while True:
             event, values = window.read()
         
             if event == sg.WINDOW_CLOSED or event == "Exit":
+                mode = -1
                 break
-        
+            
             if event == "Submit":
                 mode = None
                 for key, selected in values.items():
@@ -344,6 +420,7 @@ class RTIGUI():
                         mode = key
                         break
                 break
+            if time.time() - stamp > 0.5: self.gc_collect()
         # Close the window
         window.close()
         return mode
@@ -351,8 +428,8 @@ class RTIGUI():
     def getMenu(self):
         sFlag = self.sim.isRecord()
         eFlag = self.sim.isPlay()
-        menu_def = [['&Main', ['&Result', f"{'✓ ' if sFlag else ''}&Record",
-                        f"{'✓ ' if eFlag else ''}Pl&ay",
+        menu_def = [['&Main', ['&Result', f"{'✔ ' if sFlag else ''}&Record",
+                        f"{'✔' if eFlag else ''}Pl&ay",
                         '---', '&Properties', 'R&estart', 'E&xit']],
                     ['&Analysis', ['&stat', ['&Node', '&Link', '&Output'], '&Conclusion'], ],
                     # ['&Debugger', ['Popout', 'Launch Debugger']],
@@ -391,57 +468,53 @@ class RTIGUI():
         """
         menu_def = self.getMenu()
         # button_menu_def = ['unused', ['&Paste', ['Special', 'Normal', '!Disabled'], 'Undo', 'Exit'], ]
-    
         # Build elements in GUI
-        sg.set_options(font=("TH SarabunPSK Bold", 14))
+        sg.set_options(font=("Segoe UI Variable", 10))
         
         # Canvas for Plot
-        
         iCanvas = sg.Canvas(key='-IMAGECANVAS-')
         dCanvas = sg.Canvas(key='-DERCANVAS-')
         cCanvas = sg.Canvas(key='-CONCCANVAS-')
         
-        
         # Tree Data    
-        tData = sg.TreeData()
-        
-        data = [["", "N1", '', ''],
-                ["N1","L1-1", 0, 0],
-                ["N1","L1-2", 0, 0],
-                ["", "N2", '', ''],
-                ["N2","L2-1", 0, 0],
-                ["N2","L2-2", 0, 0],
-                ["", "N3", '', ''],
-                ["N3","L3-1", 0, 0],
-                ["N3","L3-2", 0, 0],
-                ["", "N4", '', ''],
-                ["N4","L4-1", 0, 0],
-                ["N4","L4-2", 0, 0],
-                ]
-        for r in data:
-            tData.insert(r[0], r[1], r[1], r[2:])
-            
+        prior = {}
+        count = {}
+        args = ['rssi','ir']
+        dim = (12,6)
+        check = (np.zeros(dim[0]),np.zeros(dim[0], dtype=bool))
+        for ar in args:
+            prior[ar] = {}
+            for i in range(dim[0]):
+                prior[ar][i+1] = np.zeros([dim[1], 7])
+            count[ar] = np.zeros((dim[0],dim[1]), dtype=int)
+        tData = self.write_input((prior, count, check))
+        hd = [en.name for en in PriorIndex]
+        hd = hd[:-1] + ['COUNT', 'n⋅σ']           
         tr = sg.Tree(data=tData, 
-                     headings=["RSSI","ATTEN"],
+                     headings=hd,
+                     header_font=("Segoe UI Variable", 7),
+                     col0_width=7,
+                     col_widths=3,
+                     def_col_width=3,
+                     auto_size_columns=False,
                      font=("Segoe UI Variable", 10),
                      expand_y=True,
                      key='-NODEINFO-')
+
         tab1 = sg.Tab('Image', [[iCanvas]])
         tab2 = sg.Tab('Der.', [[dCanvas]])
         tab3 = sg.Tab('Conclusion', [[cCanvas]])
         
         layout = [[]]
         
-        layout+= [[sg.Menu(menu_def, key='-MENU-', font=("Segoe UI Variable", 10))],
-                  [sg.Text(f'Current Folder : {self.sim.res_dir}')],
+        layout+= [[sg.Menu(menu_def, key='-MENU-', font=("Segoe UI Variable Bold", 10))],
+                  [sg.Text(f'Current Folder: {self.sim.res_dir}', key='-SAVEPATH-')],
                   [sg.pin(sg.Column([[sg.TabGroup([[tab1, tab2, tab3]], 
                                                   key='-TAB_GROUP-')]])), 
                    tr]]
         
-        # ly_b = 
-        
         window = sg.Window('RTI GUI', layout,
-                        # font=('Helvetica', 18),
+                        font=('Segoe UI Variable', 10),
                         # background_color='black',
                         right_click_menu=self.getRightClickMenu(),
                         # transparent_color= '#9FB8AD',
@@ -469,15 +542,20 @@ def openFolder(sdir):
         sg.popup("Invalid folder selected!")
 
 
-def select_open_folder(sdir):
+def select_open_folder(sdir, **kw):
+    txt = "Select Folder:"
+    if 'text' in kw:
+        txt = kw['text']
     layout = [
-        [sg.Text("Select Folder:")],
+        [sg.Text(txt)],
         [sg.InputText(), sg.FolderBrowse(initial_folder=sdir)],
         [sg.Button("Open"), sg.Button("Cancel")]
     ]
-    
-    window = sg.Window("Folder Browse", layout)
-    
+    title = 'Folder Browse'
+    if 'title' in kw:
+        title = kw['title']
+    window = sg.Window(title, layout)
+    stamp = time.time()
     while True:
         event, values = window.read()
         
@@ -489,9 +567,10 @@ def select_open_folder(sdir):
             folder_path = values[0]
             if os.path.isdir(folder_path):
                 os.startfile(folder_path)  # Open folder in File Explorer
+                folder_path = folder_path.replace("\\", "/")
                 break
             else:
                 sg.popup("Invalid folder selected!")
-    
+        if time.time() - stamp > 3: gc.collect()
     window.close()
     return folder_path

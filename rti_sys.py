@@ -73,6 +73,7 @@ class RTIProcess():
             print(msg)
         if self.sUpdate:
             self.sUpdate = False
+            self.input.show()
             inp, iM = self.sim.process_input(self.input)
             if self.gfx_enabled:
                 for ky in iM.keys():

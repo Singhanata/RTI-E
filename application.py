@@ -13,7 +13,7 @@ from rti_exp_sensor import process_sensor
 from rti_exp_voxel import process_voxel
 from rti_exp_weightalgorithm import process_weightalgorithm
 from rti_animation import process_animate
-
+from rti_emulator import RTIEmulator
 import threading
 import sys
 
@@ -44,6 +44,8 @@ class RTIProcessThread(threading.Thread):
             #     raise Exception('Cannot Start Thread')
             rtiConn.receive()
         elif mode == 1:
+            rtiEmulator = RTIEmulator(rti)
+            rtiEmulator.emulate()
             # mode1: Emulate RTI from empirical data
             pass
         elif mode == 21:
