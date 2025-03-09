@@ -11,7 +11,7 @@ from rti_input import RTIInput
 from rti_plot import plotRTIIm #, plotDerivative
 
 class RTIProcess():
-    RECORD_SIZE = 200
+    RECORD_SIZE = 300
     
     def __init__(self, sim):
         setting = {

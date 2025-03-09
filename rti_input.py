@@ -30,12 +30,12 @@ class RTIInput():
         self.count[key][sDID-1][idx] += 1
         # 01022025:1548: FIX: image report negative value
         normVl = self.prior[key][sDID][idx][0]
-        sz = self.size
         att = normVl - vl
+        # sz = self.size
         # 01022025:1611: FIX: increasing negative value in the image
-        if abs(att) < 2: # 05022025:1051:FIX: Baseline include target
-            updateNormVl = (normVl * sz + vl)/(sz + 1)
-            self.prior[key][sDID][idx][0] = updateNormVl
+        # if abs(att) < 2: # 05022025:1051:FIX: Baseline include target
+        #     updateNormVl = (normVl * sz + vl)/(sz + 1)
+        #     self.prior[key][sDID][idx][0] = updateNormVl
         self.prior[key][sDID][idx][1] = att
         
         nei = 0
@@ -48,9 +48,10 @@ class RTIInput():
               + " BASE:" + str(self.prior[key][sDID][idx][0]) 
               + " ct:" + str(self.count[key][sDID-1][idx]))
         if self.count[key][sDID-1][idx] >= self.size:
+            bsLine = np.average(self.log[key][sDID][idx])
             if self.prior[key][sDID][idx][3] == 0:
-                self.prior[key][sDID][idx][2] = np.average(self.log[key][sDID][idx])
-                self.prior[key][sDID][idx][0] = np.average(self.log[key][sDID][idx])
+                self.prior[key][sDID][idx][2] = bsLine
+                self.prior[key][sDID][idx][0] = bsLine
                 self.prior[key][sDID][idx][3] = 1
                 # ctypes.windll.user32.MessageBoxW(0, "set baseline", "warning", 1)
             self.prior[key][sDID][idx][0] = self.prior[key][sDID][idx][2]
