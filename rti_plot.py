@@ -13,8 +13,9 @@ from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
 def plotRTIIm(scheme, iM, **kw):
-    plt.close('all')
+     
     filename = ''
+    (min_vl, max_vl) = (0, 1)
     if 'filename' in kw:
         filename = kw['filename']
     title = ''
@@ -38,12 +39,14 @@ def plotRTIIm(scheme, iM, **kw):
     s_color = 'black'
     if 'sensor_color' in kw:
         s_color = kw['sensor_color']
-        
+    if 'atten_range' in kw:
+        (min_vl, max_vl) = kw['atten_range']
+    
     sel = scheme.selection
-
     coordX = np.asarray(sel.coordX)
     coordY = np.asarray(sel.coordY)
 
+     
     fig, ax = plt.subplots(1, 1)
     ax.set_title(title, pad=10)
     ax.set_ylabel('Y[m]')
@@ -58,8 +61,8 @@ def plotRTIIm(scheme, iM, **kw):
                    cmap=color,
                    origin='lower',
                    interpolation='nearest',
-                   vmin=0.5,
-                   vmax=2)
+                   vmin=min_vl,
+                   vmax=max_vl)
 
     cb = plt.colorbar(hm)
     plt.grid()
@@ -76,25 +79,24 @@ def plotRTIIm(scheme, iM, **kw):
         if 'path' in kw:
             fn = os.sep.join([kw['path'], 
                              (filename + '.svg')])
+        else:
+            fn = (filename + '.svg')
+        plt.savefig(fn)    
+        
+        if 'save' in kw:
             tStr = datetime.now().strftime('-%H%M%S')
-            fn_csv = os.sep.join([kw['path'], 
-                             (filename + tStr + '.csv')])
+            fn_csv = os.sep.join([kw['save'], 
+                             ('img_' + filename + tStr + '.csv')])
             if 'atten' in kw:
-                fn_inp = os.sep.join([kw['path'], 
+                fn_inp = os.sep.join([kw['save'], 
                                  ('input_'+ 
                                   filename + tStr + '.csv')])
                 np.savetxt(fn_inp, kw['atten'], delimiter = ',', fmt = '%s')
             np.savetxt(fn_csv, iM.T, 
                        delimiter = ',', fmt = '%s')
 
-        else:
-            fn = (filename + '.svg')
-        plt.savefig(fn)    
-
-    if 'anime' in kw:
-        return fig, ax, hm
-
-    plt.show()
+    plt.show(block=False)
+    return fig
 
 def plotDerivative(scheme, de, **kw):
     filename = ''
@@ -129,7 +131,8 @@ def plotDerivative(scheme, de, **kw):
     
     X, Y = np.meshgrid(coordX[0:-1] + scheme.vx_width/2, 
                        coordY[0:-1] + scheme.vx_length/2)
-
+    
+     
     fig, ax = plt.subplots(1, 1)
     hm = ax.imshow(de[RecordIndex.DERIVATIVE_ABS].T,
                    extent=[coordX[0], coordX[-1], coordY[0], coordY[-1]],
@@ -169,8 +172,21 @@ def plotDerivative(scheme, de, **kw):
                              ('DE_' + filename + '.svg')])
         else:
             fn = (filename + '.svg')
-        plt.savefig(fn)    
-    plt.show()
+        plt.savefig(fn)
+        if 'save' in kw:
+            tStr = datetime.now().strftime('-%H%M%S')
+            fn_csv = os.sep.join([kw['save'], 
+                             ('der_' + filename + tStr + '.csv')])
+            if 'atten' in kw:
+                fn_inp = os.sep.join([kw['save'], 
+                                 ('input_'+ 
+                                  filename + tStr + '.csv')])
+                np.savetxt(fn_inp, kw['atten'], delimiter = ',', fmt = '%s')
+            np.savetxt(fn_csv, de[RecordIndex.DERIVATIVE_ABS].T, 
+                       delimiter = ',', fmt = '%s')
+
+    plt.show(block=False)
+    return fig
 
 def plotSurface(scheme, Z, **kw):
     filename = ''
@@ -186,6 +202,7 @@ def plotSurface(scheme, Z, **kw):
     if 'color' in kw:
         color = kw['color']
 
+     
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     
@@ -225,9 +242,23 @@ def plotSurface(scheme, Z, **kw):
         else:
             fn = (filename + '.svg')
         plt.savefig(fn)
-    plt.show()
+        if 'save' in kw:
+            tStr = datetime.now().strftime('-%H%M%S')
+            fn_csv = os.sep.join([kw['save'], 
+                             ('surf_' + filename + tStr + '.csv')])
+            if 'atten' in kw:
+                fn_inp = os.sep.join([kw['save'], 
+                                 ('input_'+ 
+                                  filename + tStr + '.csv')])
+                np.savetxt(fn_inp, kw['atten'], delimiter = ',', fmt = '%s')
+            np.savetxt(fn_csv, Z, 
+                       delimiter = ',', fmt = '%s')
+
+    plt.show(block=False)
+    return fig
     
 def process_boxplot(data, **kw):
+     
     fig, ax = plt.subplots(1,1)
     
     bp = plt.boxplot(data, 
@@ -284,10 +315,25 @@ def process_boxplot(data, **kw):
                              (kw['filename'] + '.svg')])
         else:
             fn = (kw['filename'] + '.svg')
-        plt.savefig(fn)     
-    plt.show()
+        plt.savefig(fn)
+        if 'save' in kw:
+            filename = kw['filename']
+            tStr = datetime.now().strftime('-%H%M%S')
+            fn_csv = os.sep.join([kw['save'], 
+                             ('box_' + filename + tStr + '.csv')])
+            if 'atten' in kw:
+                fn_inp = os.sep.join([kw['save'], 
+                                 ('input_'+ 
+                                  filename + tStr + '.csv')])
+                np.savetxt(fn_inp, kw['atten'], delimiter = ',', fmt = '%s')
+            np.savetxt(fn_csv, data, 
+                       delimiter = ',', fmt = '%s')
+
+    plt.show(block=False)
+    return fig
 
 def process_plot(data, **kw):
+     
     fig, ax = plt.subplots(1,1)
     
     makeR = ['o', 's', 'v', 'p', 'D', '1', '*', 'H']
@@ -349,5 +395,19 @@ def process_plot(data, **kw):
                              (kw['filename'] + '.svg')])
         else:
             fn = (kw['filename'] + '.svg')
-        plt.savefig(fn)     
-    plt.show()
+        plt.savefig(fn)
+        if 'save' in kw:
+            filename = kw['filename']
+            tStr = datetime.now().strftime('-%H%M%S')
+            fn_csv = os.sep.join([kw['save'], 
+                             ('plot_' + filename + tStr + '.csv')])
+            if 'atten' in kw:
+                fn_inp = os.sep.join([kw['save'], 
+                                 ('input_'+ 
+                                  filename + tStr + '.csv')])
+                np.savetxt(fn_inp, kw['atten'], delimiter = ',', fmt = '%s')
+            np.savetxt(fn_csv, data, 
+                       delimiter = ',', fmt = '%s')
+    
+    plt.show(block=False)
+    return fig

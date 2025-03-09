@@ -231,7 +231,10 @@ class RTIScheme():
         raise NotImplementedError
     
     def updateInput(self):
-        raise NotImplementedError    
+        raise NotImplementedError
+    
+    def getNEI(self, sDID, idx):
+        raise NotImplementedError
 
     def show(self, fn = 'scheme.svg', **kw):
         sc = 'black'

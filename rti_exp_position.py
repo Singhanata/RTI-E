@@ -5,6 +5,7 @@ Created on Mon Dec 20 08:46:00 2021
 @author: krong
 """
 import numpy as np
+import sys
 from math import ceil
 
 from rti_eval import RTIEvaluation, RecordIndex
@@ -75,7 +76,7 @@ def process_position(sim):
     setting['param1'] = x_coorD
     setting['param2'] = y_coorD
     
-    ev = RTIEvaluation(**setting)
+    ev = RTIEvaluation(sim, **setting)
 
     for i, x in enumerate(x_coorD):
         for j, y in enumerate(y_coorD):
@@ -84,9 +85,9 @@ def process_position(sim):
                              (x, y),
                              **setting)
             for key, value in refInput.items():
+                sim.control()
                 iM = (sim.estimator.calVoxelAtten(value[0], True))
-                ev.evaluate(sim,                        # RTI Simulation
-                            value[0],                   # Link Attenuation
+                ev.evaluate(value[0],                   # Link Attenuation
                             value[1],                   # Reference
                             iM,                         # Image
                             savepath,                   # Result Folder

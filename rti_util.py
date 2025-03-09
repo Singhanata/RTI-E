@@ -15,14 +15,14 @@ class Position:
         return s
 
 class Sensor:
-    def __init__(self, pos):
+    def __init__(self, idx, pos):
         """
         Parameters
         ----------
         pos : 2D Coordination Object
             Position of the sensor node
         """
-        self.id = 0
+        self.idx = idx
         self.pos = pos
 
 class RTILink:
