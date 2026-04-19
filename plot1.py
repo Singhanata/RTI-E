@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # โหลดไฟล์ Excel
-file_path = r"D:\Users\admin\Desktop\final project\New folder\Book1.xlsx"  # เปลี่ยนเป็น path ของคุณ
+file_path = r"D:\projects\Book1.xlsx"  # เปลี่ยนเป็น path ของคุณ
 df = pd.read_excel(file_path, header=None)
 
 # ลบแถวที่มีค่า NaN

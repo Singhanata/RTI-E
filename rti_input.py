@@ -49,6 +49,7 @@ class RTIInput():
         normVl = self.prior[key][sDID][idx][PriorIndex.BASE.value]
         sz = self.size
         att = normVl - vl
+        # sz = self.size
         # 01022025:1611: FIX: increasing negative value in the image
         if abs(att) < 1: # 05022025:1051:FIX: Baseline include target
             updateNormVl = (normVl * sz + vl)/(sz + 1)
