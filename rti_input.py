@@ -8,9 +8,11 @@ import numpy as np
 # import ctypes
 import os
 import time
+import pdb
 # import warning
 from datetime import datetime
 from enum import Enum
+from rti_sim_input import simulateInput
 
 class RTIInput():
     TIME_OUT = 3
@@ -22,12 +24,20 @@ class RTIInput():
         self.sim = sim
         self.size = sz
         self.savepath = savepath
+        # Check sanity of the input by using a simulate input
+        refIm = simulateInput(sim.scheme, sim.calculator, obj_pos=(2.0, 3.0))
+
         for ar in args:
             self.log[ar] = {}
             self.prior[ar] = {}
+            refImCount = 0
             for i in range(dim[0]):
                 self.log[ar][i+1] = np.zeros([dim[1], sz])
-                self.prior[ar][i+1] = np.zeros([dim[1], 7])
+                self.prior[ar][i+1] = np.zeros([dim[1], 8])
+                if (i+1)%2 != 0: # Check odd index for node contributing to image
+                    for j in range(dim[1]):
+                        self.prior[ar][i+1][j][PriorIndex.REFIM.value] = refIm['o(2.00,3.00)'][0][refImCount]
+                        refImCount = refImCount + 1
             self.count[ar] = np.zeros((dim[0],dim[1]), dtype=int)
     
     def update(self, vl, key, sDID, idx):
@@ -58,6 +68,7 @@ class RTIInput():
                 self.prior[key][sDID][idx][PriorIndex.FLOOR.value] = np.average(self.log[key][sDID][idx])
                 self.prior[key][sDID][idx][PriorIndex.BASE.value] = np.average(self.log[key][sDID][idx])
                 self.prior[key][sDID][idx][PriorIndex.IS_SET.value] = 1
+                self.prior[key][sDID][idx][PriorIndex.TOTAL.value] = self.size
             else: #common value update
                 n = self.prior[key][sDID][idx][PriorIndex.TOTAL.value]
                 avg_o = self.prior[key][sDID][idx][PriorIndex.MEAN.value]
@@ -70,8 +81,9 @@ class RTIInput():
             parent_folder = self.savepath['rec']
             if self.sim.isRecord():
                 parent_folder = os.sep.join([self.sim.savePath, 'N'])
-                os.mkdir(parent_folder, exist_ok=True)
-            self.prior[key][sDID][idx][0] = self.prior[key][sDID][idx][2]
+                os.makedirs(parent_folder, exist_ok=True)
+                # print('N save at - ' + parent_folder)
+            self.prior[key][sDID][idx][PriorIndex.BASE.value] = self.prior[key][sDID][idx][PriorIndex.FLOOR.value]
             self.timeStr = datetime.now().strftime('_%d%m%Y_%H%M%S')
             filename = 'N' + str(sDID) + key + self.timeStr + '.csv'
             filepath = os.sep.join([parent_folder, filename])
@@ -84,6 +96,7 @@ class RTIInput():
         for i, stamp in enumerate(self.check[0]):
             if (ctime - stamp > RTIInput.TIME_OUT): 
                 self.check[1][i]=True
+        # pdb.set_trace()
         self.sim.showLink((self.prior, self.count, self.check))
         
 class PriorIndex(Enum):
@@ -94,6 +107,7 @@ class PriorIndex(Enum):
     STD = 4
     TOTAL = 5
     IS_SET = 6
+    REFIM = 7
     
 def update_mean_std(old_mean, old_std, old_N, new_samples):
     """Update mean and standard deviation incrementally.

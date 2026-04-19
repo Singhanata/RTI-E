@@ -534,3 +534,24 @@ def _getBorderIdx(idx_obJ, **kw):
             return [(bU | bD | bL | bR),
                     (bL | bR),
                     (bU | bD)]
+
+def create_selection_matrix(shape, top_left, bottom_right):
+    """
+    Creates a 2D matrix with a rectangular section set to 1.
+
+    Args:
+        shape (tuple): Shape of the full matrix (rows, cols).
+        top_left (tuple): (row, col) of the top-left corner of the rectangle.
+        bottom_right (tuple): (row, col) of the bottom-right corner of the rectangle.
+
+    Returns:
+        np.ndarray: The resulting matrix.
+    """
+    mat = np.zeros(shape, dtype=int)
+
+    # Slice the rectangle and set it to 1
+    r1, c1 = top_left
+    r2, c2 = bottom_right
+    mat[r1:r2+1, c1:c2+1] = 1
+
+    return mat

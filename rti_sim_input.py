@@ -67,8 +67,8 @@ def simulateInput(scheme, cal, obj_pos = (0., 0.), **kw):
 
     """
     obj_dim = (1.,1.)
-    if 'object_dimension' in kw:
-        obj_dim = kw['object_dimension']
+    if 'obj_dim' in kw:
+        obj_dim = kw['obj_dim']
     
     if 'form' in kw:
         kw['key'] = kw['form']

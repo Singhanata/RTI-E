@@ -11,6 +11,7 @@ from rti_util import Sensor, RTILink
 import numpy as np
 
 class RectangularScheme(RTIScheme):
+    CODE = 'RE'
     def __init__(
             self,
             ref_pos=(0.,0.),

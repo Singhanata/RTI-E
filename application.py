@@ -44,10 +44,8 @@ class RTIProcessThread(threading.Thread):
             #     raise Exception('Cannot Start Thread')
             rtiConn.receive()
         elif mode == 1:
-            rtiEmulator = RTIEmulator(rti)
-            rtiEmulator.emulate()
             # mode1: Emulate RTI from empirical data
-            pass
+            rti.emulator.emulate()
         elif mode == 21:
             # mode21: animate from simulation
             process_animate(rti)
@@ -77,7 +75,7 @@ class RTIProcessThread(threading.Thread):
 def main():
     rti = RTISimulation()
     mode = rti.init()
-    
+    if mode == 1: rti.setEmulator(RTIEmulator(rti))
     tProcess = RTIProcessThread(rti, mode, 'Process Thread')
         
     try:

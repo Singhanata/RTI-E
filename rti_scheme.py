@@ -9,11 +9,12 @@ sensors
 """
 import numpy as np
 import matplotlib.pyplot as plt
-
+from rti_eval import convolve2D
 from rti_grid import RTIGrid
 from rti_util import Position, Sensor, RTILink
 
 class RTIScheme():
+    CODE = 'S'
     def __init__(self,
             ref_pos=(0.,0.),
             area_width=10.,
@@ -212,13 +213,17 @@ class RTIScheme():
              str(self.vx_length) + ')' + '\n' +
              'N_sensor, ' + str(self.n_sensor) + '\n')
         return s
-    def getTitle(self):
-        s = ('a@' + Position.toString(self.ref_pos) + '-' +
-             'dim@' + '(' + str(self.area_width) + ', ' + 
-             str(self.area_length) + ')' + '-' +
-             'vx@' + '(' + str(self.vx_width) + ', ' + 
-             str(self.vx_length) + ')' + '-' +
-             'N@' + str(self.n_sensor))
+    def getTitle(self, fn=False):
+        s=''
+        if fn:
+            s = self.CODE + f'-A{self.area_width}{self.area_length}_V{self.vx_width}{self.vx_length}_NS{self.n_sensor}'
+        else:
+            s = ('a@' + Position.toString(self.ref_pos) + '-' +
+                 'dim@' + '(' + str(self.area_width) + ', ' + 
+                 str(self.area_length) + ')' + '-' +
+                 'vx@' + '(' + str(self.vx_width) + ', ' + 
+                 str(self.vx_length) + ')' + '-' +
+                 'N@' + str(self.n_sensor))
         return s
 
     def getShape(self):
@@ -235,6 +240,20 @@ class RTIScheme():
     
     def getNEI(self, sDID, idx):
         raise NotImplementedError
+    
+    def find_target(self, iM, section='', pos_mat_dim=(3,3), **kw):
+        pos_mat = np.ones(pos_mat_dim, dtype=int)
+        if 'pos_mat' in kw: pos_mat = kw['pos_mat']
+        vxS = self.build_section(section)
+        p_mat = convolve2D(iM, pos_mat)
+        p_mat *= vxS
+        
+        max_pos = np.unravel_index(np.argmax(p_mat), p_mat.shape)
+        max_val = p_mat[max_pos]
+        t_x = self.rtiGrid.getX(max_pos[0])
+        t_y = self.rtiGrid.getY(max_pos[1])
+        
+        return ((t_x, t_y), max_val)
 
     def show(self, fn = 'scheme.svg', **kw):
         sc = 'black'
@@ -295,3 +314,26 @@ class RTIScheme():
         plt.savefig(fn)
         plt.show()
 
+    def build_section(self, section=''):
+        if section == '':  return np.ones(self.selection.getShape()) 
+        coordX = self.coordX
+        coordY = self.coordY
+        dx = coordX[-1] - coordX[0]
+        dy = coordY[-1] - coordY[0]
+        
+        if isinstance(section, str): f, h = section, -1
+        elif isinstance(section, int): f, h = '  ', section 
+        
+        if (f[0] == 'l') or (h in [0, 3, 6]): x_range = (coordX[0], dx/3)
+        elif (f[0] == 'c') or (h in [1, 4, 7]): x_range = (dx/3, 2*dx/3)
+        elif (f[0] == 'r') or (h in [2, 5, 8]): x_range = (2*dx/3, coordX[-1])
+        else:
+            raise ValueError('form not defined')
+            
+        if (f[1] == 't') or (h in [6, 7, 8]): y_range = (2*dy/3, coordY[-1])
+        elif (f[1] == 'c') or (h in [3, 4, 5]): y_range = (dy/3, 2*dy/3)
+        elif (f[1] == 'b') or (h in [0, 1, 2]): y_range = (coordY[0], dy/3)
+        else:
+            raise ValueError('form not defined')
+    
+        return self.getVoxelScenario(x_range, y_range)

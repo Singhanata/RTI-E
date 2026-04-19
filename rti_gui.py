@@ -4,7 +4,7 @@ Created on Tue Mar  4 18:40:48 2025
 
 @author: krong
 """
-
+import pdb
 import PySimpleGUI as sg
 import matplotlib.pyplot as plt
 import numpy as np
@@ -28,6 +28,7 @@ class RTIGUI():
         self.gc_control = [8,0]
         self.fig_update_queue = queue.Queue(maxsize=5)  # Limit pending events to 5
         self.input_update_queue = queue.Queue(maxsize=3)# Limit pending events to 5
+        self.emu_f = False
         # Build GUI
         self.window = self._create_gui()
         sg.set_options(keep_on_top=True)
@@ -53,13 +54,29 @@ class RTIGUI():
             self.draw_plot(fig, key)
             
         if (ev == '-UPDATESETTING-'):
-            if not self.input_update_queue.empty():
-                self.input_update_queue.get()  # Remove processed event
             self.inputSetting()
             
         if (ev == '-UPDATEINPUT-'):
-            self.write_input(vl['-UPDATEINPUT-'])
+            if not self.input_update_queue.empty():
+                self.input_update_queue.get()  # Remove processed event
 
+            self.write_input(vl['-UPDATEINPUT-'])
+            
+        if (ev == '-EMULATE-'):
+            self.sim.emulator.emulate_order = select_open_folder(vl['-EMULATE-'],
+                                                                 # True,
+                                                                 input1='pos', 
+                                                                 input2='n_sample')
+            self.emu_f = False
+            self.sim.emulate_flag.set()
+            
+        if (ev in ('EMULATE', '-EBUTTON-')):
+            # self.sim.emulator.emulate_order = select_open_folder('', 
+            #                                                      input1='pos', 
+            #                                                      input2='n_sample')
+            self.emu_f = False
+            self.sim.emulate_flag.clear()
+            
         self.menu_listener(ev, vl)
         self.gc_collect()
             
@@ -199,21 +216,25 @@ class RTIGUI():
             [sg.Checkbox("Graphics Enabled", default=setting['gfx_enabled'], key="GFX_ENABLED")],
             [sg.Checkbox("Derivative Plot Enabled", default=derEnabled, key="DER_ENABLED")],
             [sg.Checkbox("Record Enabled", default=recEnabled, key="REC_ENABLED")],
-            [sg.Text("Result Set:")],
-            [sg.Checkbox("RMSE", default=(RecordIndex.RMSE_ALL in self.sim.setting['resultset']), key="RMSE"),
-             sg.Checkbox("IMAGE", default=(RecordIndex.IMAGE in self.sim.setting['resultset']), key="IMAGE"),
-             sg.Checkbox("OBJ_RATIO", default=(RecordIndex.OBJ_RATIO in self.sim.setting['resultset']), key="OBJ_RATIO"),
-             sg.Checkbox("OBJ_MEAN", default=(RecordIndex.OBJ_MEAN in self.sim.setting['resultset']), key="OBJ_MEAN"),
-             sg.Checkbox("NON_MEAN", default=(RecordIndex.NON_MEAN in self.sim.setting['resultset']), key="NON_MEAN"),
-             sg.Checkbox("DERIVATIVE_ABS", default=(RecordIndex.DERIVATIVE_ABS in self.sim.setting['resultset']), key="DERIVATIVE_ABS")],
-            [sg.Checkbox("DERIVATIVE_MEAN", default=(RecordIndex.DERIVATIVE_MEAN in self.sim.setting['resultset']), key="DERIVATIVE_MEAN"),
-             sg.Checkbox("DERIVATIVE_BORDERRATIO", default=(RecordIndex.DERIVATIVE_BORDERRATIO in self.sim.setting['resultset']), key="DERIVATIVE_BORDERRATIO"),
-             sg.Checkbox("DERIVATIVE_NONBORDERRATIO", default=(RecordIndex.DERIVATIVE_NONBORDERRATIO in self.sim.setting['resultset']), key="DERIVATIVE_NONBORDERRATIO"),
-             sg.Checkbox("DERIVATIVE_RATIO_XN", default=(RecordIndex.DERIVATIVE_RATIO_XN in self.sim.setting['resultset']), key="DERIVATIVE_RATIO_XN"),
-             sg.Checkbox("DERIVATIVE_RATIO_YN", default=(RecordIndex.DERIVATIVE_RATIO_YN in self.sim.setting['resultset']), key="DERIVATIVE_RATIO_YN"),
-             sg.Checkbox("DERIVATIVE_RATIO_BN", default=(RecordIndex.DERIVATIVE_RATIO_BN in self.sim.setting['resultset']), key="DERIVATIVE_RATIO_BN")],
-        
-            [sg.Button("Save"), sg.Button("Cancel")]]
+            [sg.Text("Result Set:")]]
+        try:
+            if 'resultset' in setting:
+                layout.append(
+                [sg.Checkbox("RMSE", default=(RecordIndex.RMSE_ALL in self.sim.setting['resultset']), key="RMSE"),
+                 sg.Checkbox("IMAGE", default=(RecordIndex.IMAGE in self.sim.setting['resultset']), key="IMAGE"),
+                 sg.Checkbox("OBJ_RATIO", default=(RecordIndex.OBJ_RATIO in self.sim.setting['resultset']), key="OBJ_RATIO"),
+                 sg.Checkbox("OBJ_MEAN", default=(RecordIndex.OBJ_MEAN in self.sim.setting['resultset']), key="OBJ_MEAN"),
+                 sg.Checkbox("NON_MEAN", default=(RecordIndex.NON_MEAN in self.sim.setting['resultset']), key="NON_MEAN"),
+                 sg.Checkbox("DERIVATIVE_ABS", default=(RecordIndex.DERIVATIVE_ABS in self.sim.setting['resultset']), key="DERIVATIVE_ABS")])
+                layout.append(
+                [sg.Checkbox("DERIVATIVE_MEAN", default=(RecordIndex.DERIVATIVE_MEAN in self.sim.setting['resultset']), key="DERIVATIVE_MEAN"),
+                 sg.Checkbox("DERIVATIVE_BORDERRATIO", default=(RecordIndex.DERIVATIVE_BORDERRATIO in self.sim.setting['resultset']), key="DERIVATIVE_BORDERRATIO"),
+                 sg.Checkbox("DERIVATIVE_NONBORDERRATIO", default=(RecordIndex.DERIVATIVE_NONBORDERRATIO in self.sim.setting['resultset']), key="DERIVATIVE_NONBORDERRATIO"),
+                 sg.Checkbox("DERIVATIVE_RATIO_XN", default=(RecordIndex.DERIVATIVE_RATIO_XN in self.sim.setting['resultset']), key="DERIVATIVE_RATIO_XN"),
+                 sg.Checkbox("DERIVATIVE_RATIO_YN", default=(RecordIndex.DERIVATIVE_RATIO_YN in self.sim.setting['resultset']), key="DERIVATIVE_RATIO_YN"),
+                 sg.Checkbox("DERIVATIVE_RATIO_BN", default=(RecordIndex.DERIVATIVE_RATIO_BN in self.sim.setting['resultset']), key="DERIVATIVE_RATIO_BN")])
+        except KeyError: pass
+        layout.append([sg.Button("Save"), sg.Button("Cancel")])
 
         # Create window
         window = sg.Window("Settings", layout)
@@ -289,8 +310,7 @@ class RTIGUI():
                         self.sim.setting['resultset'].append(RecordIndex.DERIVATIVE_RATIO_YN)
                     if values["DERIVATIVE_RATIO_BN"]:
                         self.sim.setting['resultset'].append(RecordIndex.DERIVATIVE_RATIO_BN)
-                except:
-                    Exception('resultset cannot be set')
+                except: Exception('resultset cannot be set')
                 self.showSetting()
                 break
             if time.time() - stamp > 0.5: self.gc_collect()
@@ -318,14 +338,18 @@ class RTIGUI():
                 return
             self.fig_update_queue.put(1)
             self.window.write_event_value('-UPDATEFIG-', (vl, kw['key']))
-        if kw['ev'] == 'Setting':
-            self.window.write_event_value('-UPDATESETTING-', None)
+        if kw['ev'] == 'Setting': self.window.write_event_value('-UPDATESETTING-', None)
         if kw['ev'] == 'Input':
-            self.input_update_queue.put(1)
             if self.input_update_queue.full(): 
                 print('Input update queue is full. Input cannot be updated')
                 return
+            self.input_update_queue.put(1)
             self.window.write_event_value('-UPDATEINPUT-', vl)
+        if kw['ev'] == 'Emulate':
+            if (self.sim.isEmul()) or self.emu_f: return
+            self.window['-EBUTTON-'].update(disabled=False)
+            self.window.write_event_value('-EMULATE-', vl)
+            self.emu_f = True
         # self.sim.update_flag.clear()
     def draw_plot(self, fig, key):
         if self.window.was_closed():
@@ -358,6 +382,7 @@ class RTIGUI():
         prior = vl[0]
         nCount = vl[1]
         nCheck = vl[2]
+        
         tree_data = sg.TreeData()
         for key, vl in prior.items():
             if key == 'ir':
@@ -379,11 +404,22 @@ class RTIGUI():
                               r[PriorIndex.MEAN.value])/r[PriorIndex.STD.value]
                     data = r[:-1]
                     data = np.append(data, [nCount[key][sDID-1][idx], nSigma])
-                    tree_data.Insert(snKey, lkKey, lkKey, data)
+                    dat = [f'{value:.2f}' for value in data] 
+                    tree_data.Insert(snKey, lkKey, lkKey, dat)
         try: 
+            # expanded_keys = [key for key in tree_data.tree_dict.keys()
+            #              if self.window["-NODEINFO-"].Widget.item(key, "open")]
             self.window['-NODEINFO-'].update(tree_data)
+            # pdb.set_trace()
+            # for key in expanded_keys:
+            #     if key in tree_data.tree_dict:  # Check if the key still exists
+            #         self.window["-NODEINFO-"].Widget.item(key, open=True)
         except AttributeError: pass        
         return tree_data
+    
+    def warning(self, txt, **kw):
+        sg.popup("⚠️ Warning! : " + txt, **kw)
+
                 
     def getMode(self):
         # Define the layout
@@ -429,7 +465,7 @@ class RTIGUI():
         sFlag = self.sim.isRecord()
         eFlag = self.sim.isPlay()
         menu_def = [['&Main', ['&Result', f"{'✔ ' if sFlag else ''}&Record",
-                        f"{'✔' if eFlag else ''}Pl&ay",
+                        f"{'✔ ' if eFlag else ''}Pl&ay",
                         '---', '&Properties', 'R&estart', 'E&xit']],
                     ['&Analysis', ['&stat', ['&Node', '&Link', '&Output'], '&Conclusion'], ],
                     # ['&Debugger', ['Popout', 'Launch Debugger']],
@@ -494,11 +530,12 @@ class RTIGUI():
                      headings=hd,
                      header_font=("Segoe UI Variable", 7),
                      col0_width=7,
-                     col_widths=3,
-                     def_col_width=3,
+                     col_widths=5,
+                     def_col_width=5,
                      auto_size_columns=False,
                      font=("Segoe UI Variable", 10),
                      expand_y=True,
+                     show_expanded=True,
                      key='-NODEINFO-')
 
         tab1 = sg.Tab('Image', [[iCanvas]])
@@ -509,8 +546,10 @@ class RTIGUI():
         
         layout+= [[sg.Menu(menu_def, key='-MENU-', font=("Segoe UI Variable Bold", 10))],
                   [sg.Text(f'Current Folder: {self.sim.res_dir}', key='-SAVEPATH-')],
-                  [sg.pin(sg.Column([[sg.TabGroup([[tab1, tab2, tab3]], 
-                                                  key='-TAB_GROUP-')]])), 
+                  [sg.pin(sg.Column([[sg.Checkbox('Process Thread', key='-TCHECK-', default=True)],
+                                     [sg.TabGroup([[tab1, tab2, tab3]], 
+                                                  key='-TAB_GROUP-')],
+                                     [sg.Button('EMULATE', disabled=True, key='-EBUTTON-')]])), 
                    tr]]
         
         window = sg.Window('RTI GUI', layout,
@@ -542,15 +581,22 @@ def openFolder(sdir):
         sg.popup("Invalid folder selected!")
 
 
-def select_open_folder(sdir, **kw):
+def select_open_folder(sdir, openFolder=False, **kw):
     txt = "Select Folder:"
     if 'text' in kw:
         txt = kw['text']
+    arg = [None]
     layout = [
         [sg.Text(txt)],
-        [sg.InputText(), sg.FolderBrowse(initial_folder=sdir)],
-        [sg.Button("Open"), sg.Button("Cancel")]
-    ]
+        [sg.InputText(), sg.FolderBrowse(initial_folder=sdir)],]
+    if 'input1' in kw:
+        layout.append([sg.Text(kw['input1']), sg.InputText(size=(10,1))])
+        arg.append(None)
+    if 'input2' in kw:
+        layout.append([sg.Text(kw['input2']), sg.InputText(size=(10,1))])
+        arg.append(None)
+    layout.append([sg.Button("Ok"), sg.Button("Cancel")])
+    
     title = 'Folder Browse'
     if 'title' in kw:
         title = kw['title']
@@ -560,17 +606,50 @@ def select_open_folder(sdir, **kw):
         event, values = window.read()
         
         if event in (sg.WIN_CLOSED, "Cancel"):
-            folder_path = None
             break
         
-        if event == "Open":
-            folder_path = values[0]
-            if os.path.isdir(folder_path):
-                os.startfile(folder_path)  # Open folder in File Explorer
-                folder_path = folder_path.replace("\\", "/")
-                break
+        if event == "Ok":
+            fP = values[0]
+            if os.path.isdir(fP):
+                if openFolder: os.startfile(fP)  # Open folder in File Explorer
+                arg[0] = fP.replace("\\", "/")
+                if 'input1' in kw:
+                    arg[1] = values[1]
+                    if 'input2' in kw: arg[2] = values[2]
+                    break
+                window.close()
+                return arg[0]
             else:
                 sg.popup("Invalid folder selected!")
         if time.time() - stamp > 3: gc.collect()
     window.close()
-    return folder_path
+    return arg
+
+def choose_file(file_types=(("All Files", "*.*"),)):
+    """
+    Opens a file selection dialog using PySimpleGUI.
+
+    Args:
+        file_types (tuple): Tuple specifying file types to filter, e.g., (("Text Files", "*.txt"),).
+    
+    Returns:
+        str: The selected file path or None if no file was chosen.
+    """
+    layout = [
+        [sg.Text("Select a File:"), sg.InputText(key="-FILE-", enable_events=True), sg.FileBrowse(file_types=file_types)],
+        [sg.Button("OK"), sg.Button("Cancel")]
+    ]
+
+    window = sg.Window("Choose a File", layout, modal=True)
+
+    file_path = None
+    while True:
+        event, values = window.read()
+        if event in (sg.WIN_CLOSED, "Cancel"):
+            break
+        if event == "OK":
+            file_path = values["-FILE-"]
+            break
+
+    window.close()
+    return file_path

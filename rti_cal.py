@@ -9,6 +9,7 @@ import numpy as np
 from rti_grid import RTIGrid
 
 class RTIWeightCalculator(metaclass=ABCMeta):
+    CODE = 'C'
     def __init__(self):
         super().__init__()
 

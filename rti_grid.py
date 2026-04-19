@@ -20,12 +20,12 @@ class Selection():
         coordX = self.coordX
         if isPositive:
             for i in range(len(coordX)-1):
-                if coordX[i] <= x < coordX[i+1]:
+                if coordX[i] <= x <= coordX[i+1]:
                     return i
             raise ValueError('input value is out of bound')
         else:
             for i in range(len(coordX)-1):
-                if coordX[i+1] >= x > coordX[i]:
+                if coordX[i+1] >= x >= coordX[i]:
                     return i
             raise ValueError('input value is out of bound')
 
@@ -33,12 +33,12 @@ class Selection():
         coordY = self.coordY
         if isPositive:
             for i in range(len(coordY)-1):
-                if coordY[i] <= y < coordY[i+1]:
+                if coordY[i] <= y <= coordY[i+1]:
                     return i
             raise ValueError('input value is out of bound')
         else:
             for i in range(len(coordY)-1):
-                if coordY[i+1] >= y > coordY[i]:
+                if coordY[i+1] >= y >= coordY[i]:
                     return i
             raise ValueError('input value is out of bound')
 
@@ -76,14 +76,14 @@ class Selection():
         if min_y < self.coordY[0]:
             min_idx = 0
         else:
-            min_idx = self.getXIndex(min_y, True)
+            min_idx = self.getYIndex(min_y, True)
         if max_y > self.coordY[-1]:
             max_idx = len(self.coordY) - 1
         else:
-            max_idx = self.getXIndex(max_y, False)
+            max_idx = self.getYIndex(max_y, False)
 
         return (min_idx, max_idx)
-
+    
     def getShape(self):
         return (len(self.coordX)-1,len(self.coordY)-1)
 
@@ -132,6 +132,9 @@ class RTIGrid:
         self.coordX = np.linspace(self.min_x, self.max_x, int(self.nx + 1))
         self.coordY = np.linspace(self.min_y, self.max_y, int(self.ny + 1))
         self.selectedGrid = self.initSelectedVoxels()
+    
+    def getX(self, idx): return self.gx_span * (idx + 1/2) 
+    def getY(self, idx): return self.gy_span * (idx + 1/2)
 
     def getCoordination(self):
         return (self.coordX, self.coordY)

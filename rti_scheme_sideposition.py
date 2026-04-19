@@ -7,9 +7,11 @@ Created on Thu Jun  3 18:04:35 2021
 
 from rti_scheme import RTIScheme
 from rti_util import Sensor, RTILink
+from rti_input import PriorIndex
 import numpy as np
 
 class SidePositionScheme(RTIScheme):
+    CODE = 'SW'
     def __init__(
             self,
             ref_pos=(0.,0.),
@@ -145,9 +147,9 @@ class SidePositionScheme(RTIScheme):
                 idx = 2*i+1
                 for j in range(n):
                     out = (str(k) + ": NODE:" + str(idx) + "NEI ID:" +
-                           str(j) + "-" + str(inp.prior[k][idx][j][1]))
+                           str(j) + "-" + str(inp.prior[k][idx][j][PriorIndex.REFIM.value]))
                     print(out)
-                    l_a[count] = inp.prior[k][idx][j][1]
+                    l_a[count] = inp.prior[k][idx][j][PriorIndex.REFIM.value]
                     count = count + 1
             l_atten[k] = l_a
         return l_atten

@@ -38,13 +38,10 @@ class RTIProcess():
             'gfx_enabled': True,
             'record_enabled': False,
             'der_plot_enabled': False,
-            'hmap_range': (0, 1),
+            'hmap_range': (0.5, 1.5),
             
             # 'frame_rate': 30
-            # 'resultset': [
-            #     RecordIndex.RMSE_ALL,
-            #     RecordIndex.OBJ_RATIO,
-            #     RecordIndex.DERIVATIVE_RATIO_BN]
+            'resultset': []
         }
 
         self.savepath = sim.process_routine(**setting)

@@ -9,6 +9,7 @@ import numpy as np
 import math
 
 class ExpDecayRTICalculator(RTIWeightCalculator):
+    CODE = 'EX'
     def __init__(self, scheme, sigma_w = 0.02):
         """
 

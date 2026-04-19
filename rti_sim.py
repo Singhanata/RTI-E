@@ -35,6 +35,7 @@ class RTISimulation():
         self.terminate_flag = threading.Event()
         self.save_flag = threading.Event()
         self.execute_flag = threading.Event()
+        self.emulate_flag = threading.Event()
         # self.update_flag = threading.Event()
         # self.update_flag.set()
         self.setting = RTISetting.default()
@@ -168,7 +169,7 @@ class RTISimulation():
         save_path['rec'] = fn_rec
         save_path['conc'] = fn_con
         print('sim create.. ' + self.getTitle())
-        self.saveSetting(self.setting, fdn)
+        saveSetting(self.setting, fdn)
         return save_path
     
     def process_input(self, inp):
@@ -181,6 +182,9 @@ class RTISimulation():
 
             iM[key] = self.estimator.calVoxelAtten(vl, False) 
         return l_atten, iM
+    
+    def setEmulator(self, em):
+        self.emulator = em
     
     def coorD(self, **kw):
         if 'axis' in kw:
@@ -196,7 +200,7 @@ class RTISimulation():
     def getInputDimension(self): return self.scheme.getInputDimension()
     
     def getNEI(self, sDID, idx): 
-        try: return self.scheme.getNEI(idx)
+        try: return self.scheme.getNEI(sDID, idx)
         except AttributeError: return idx
     
     def init(self):
@@ -210,19 +214,25 @@ class RTISimulation():
     def isRecord(self):
         return self.save_flag.is_set()
     
-    def stop(self):
+    def isStop(self):
         return self.terminate_flag.is_set()
     
+    def isEmul(self):
+        return self.emulate_flag.is_set()
+    
     def control(self):
-        if self.stop():
+        if self.isStop():
             sys.exit()
         self.execute_flag.wait()
         
     def run(self, th):
         while True:
             ev, vl = self.gui.read()
+            if not th.is_alive(): self.gui.window['-TCHECK-'].update(value=False)
+            else: self.gui.window['-TCHECK-'].update(value=True)  
+                
             if ev == 'Record':
-                self.saveSetting(self.setting, self.savePath)
+                saveSetting(self.setting, self.savePath)
                 
             if ev == 'Exit':
                 self.execute_flag.set()
@@ -233,27 +243,32 @@ class RTISimulation():
                 sys.exit()
             
             if ev == 'Restart':
-                self.execute_flag.set()
-                # self.update_flag.set()
-                self.gui.close()
-                self.terminate_flag.set()
-                th.join()
-                # python = sys.executable
-                # os.execl(python, python, *sys.argv)  
-                python = sys.executable
-                script = sys.argv[0]  # Current script name
-                # Start a new instance of the script
-                subprocess.Popen([python, script])  
-                # Exit the current instance (but not the Spyder kernel)
-                sys.exit(0)
-            # self.update_flag.set()
-
+                self.restart(th)
+                
+    def restart(self, th):
+        self.execute_flag.set()
+        # self.update_flag.set()
+        self.gui.close()
+        self.terminate_flag.set()
+        th.join()
+        # python = sys.executable
+        # os.execl(python, python, *sys.argv)  
+        python = sys.executable
+        script = sys.argv[0]  # Current script name
+        # Start a new instance of the script
+        subprocess.Popen([python, script])  
+        # Exit the current instance (but not the Spyder kernel)
+        sys.exit(0)
+        
     def showIM(self, fig, **kw):
         self.control()
         self.gui.update(fig, **kw, ev='Figure')
     
     def showLink(self, vl):
         self.gui.update(vl, ev='Input')
+    
+    def emulateInput(self, path):
+        self.gui.update(path, ev='Emulate')
     
 def saveSetting(setting_, path):
     setting = copy.deepcopy(setting_)
@@ -273,4 +288,4 @@ def loadSetting(**kw):
             setting = json.load(f)
             if 'resultset' in setting:
                 setting['resultset'] = [RecordIndex[n] for n in setting['resultset']]
-    return setting        
+    return (setting, path)        
