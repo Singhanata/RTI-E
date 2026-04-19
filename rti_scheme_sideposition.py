@@ -146,10 +146,11 @@ class SidePositionScheme(RTIScheme):
             for i in range(n):
                 idx = 2*i+1
                 for j in range(n):
+                    vl = inp.getCurrentInput(k, idx, j)
                     out = (str(k) + ": NODE:" + str(idx) + "NEI ID:" +
-                           str(j) + "-" + str(inp.prior[k][idx][j][PriorIndex.REFIM.value]))
+                           str(j) + "-" + str(vl))
                     print(out)
-                    l_a[count] = inp.prior[k][idx][j][PriorIndex.REFIM.value]
+                    l_a[count] = vl
                     count = count + 1
             l_atten[k] = l_a
         return l_atten

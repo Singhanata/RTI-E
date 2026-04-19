@@ -24,6 +24,9 @@ class RTIInput():
         self.sim = sim
         self.size = sz
         self.savepath = savepath
+        self.sInputCheck = False
+        if 'CheckInput' in sim.setting:
+            self.sInputCheck = True
         # Check sanity of the input by using a simulate input
         refIm = simulateInput(sim.scheme, sim.calculator, obj_pos=(2.0, 3.0))
 
@@ -36,6 +39,8 @@ class RTIInput():
                 self.prior[ar][i+1] = np.zeros([dim[1], 8])
                 if (i+1)%2 != 0: # Check odd index for node contributing to image
                     for j in range(dim[1]):
+                        # REFIM is used for sanity check by introduced the known input
+                        # which is the simulated image of and object at (2.00,3.00)
                         self.prior[ar][i+1][j][PriorIndex.REFIM.value] = refIm['o(2.00,3.00)'][0][refImCount]
                         refImCount = refImCount + 1
             self.count[ar] = np.zeros((dim[0],dim[1]), dtype=int)
@@ -100,6 +105,12 @@ class RTIInput():
         # pdb.set_trace()
         self.sim.showLink((self.prior, self.count, self.check))
         
+    def getCurrentInput(self, key, idx, j):
+        vl = self.prior[key][idx][j][PriorIndex.ATTEN.value]
+        if self.sInputCheck:
+            vl = self.prior[key][idx][j][PriorIndex.REFIM.value]
+        return vl
+    
 class PriorIndex(Enum):
     ATTEN = 0
     BASE = 1

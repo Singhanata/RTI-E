@@ -1,0 +1,36 @@
+{
+    "title": "RTIExperiment",
+    "area_dimension": [
+        4.0,
+        7.0
+    ],
+    "voxel_dimension": [
+        0.2,
+        0.2
+    ],
+    "sensing_area_position": [
+        4.0,
+        7.0
+    ],
+    "n_sensor": 12,
+    "alpha": 1,
+    "schemeType": "SW",
+    "weightalgorithm": "EX",
+    "object_type": "human",
+    "SNR": 4,
+    "SNR_mode": 2,
+    "sample_size": 100,
+    "paramset": [
+        "obj_pos"
+    ],
+    "paramlabel": [
+        "Object Position"
+    ],
+    "gfx_enabled": true,
+    "record_enabled": false,
+    "der_plot_enabled": false,
+    "hmap_range": [
+        0.5,
+        2.0
+    ]
+}

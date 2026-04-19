@@ -22,6 +22,7 @@ class RTIEmulator():
         (setting, path) = loadSetting(title='LOAD DATA', 
                                        text='Select DATA Folder:')
         # setting['no_confirm'] = True
+        # setting['CheckInput'] = True
         self.dataPath = path
         self.savePath = sim.process_routine(**setting)
         self.dim = sim.getInputDimension()
